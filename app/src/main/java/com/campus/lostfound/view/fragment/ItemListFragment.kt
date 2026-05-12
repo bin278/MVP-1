@@ -22,6 +22,7 @@ import com.campus.lostfound.view.adapter.ItemAdapter
 class ItemListFragment : Fragment() {
 
     private var itemType: String? = null
+    private var searchQuery: String = ""
     private lateinit var itemDao: ItemDao
     private lateinit var adapter: ItemAdapter
     private lateinit var recyclerView: RecyclerView
@@ -31,10 +32,14 @@ class ItemListFragment : Fragment() {
     private var currentCategory: String? = null
 
     companion object {
-        fun newInstance(type: String?): ItemListFragment {
+        private const val ARG_TYPE = "type"
+        private const val ARG_SEARCH = "search"
+
+        fun newInstance(type: String?, search: String = ""): ItemListFragment {
             val fragment = ItemListFragment()
             val args = Bundle()
-            args.putString("type", type)
+            args.putString(ARG_TYPE, type)
+            args.putString(ARG_SEARCH, search)
             fragment.arguments = args
             return fragment
         }
@@ -42,7 +47,8 @@ class ItemListFragment : Fragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        itemType = arguments?.getString("type")
+        itemType = arguments?.getString(ARG_TYPE)
+        searchQuery = arguments?.getString(ARG_SEARCH) ?: ""
     }
 
     override fun onCreateView(
@@ -93,10 +99,29 @@ class ItemListFragment : Fragment() {
 
     fun loadData() {
         val items = itemDao.queryAll(itemType, currentCategory)
-        adapter.setItems(items)
-        tvEmpty.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
-        recyclerView.visibility = if (items.isEmpty()) View.GONE else View.VISIBLE
+        // 如果有搜索关键词，进行过滤
+        val filteredItems = if (searchQuery.isNotEmpty()) {
+            items.filter { item ->
+                item.name.contains(searchQuery, ignoreCase = true) ||
+                item.location.contains(searchQuery, ignoreCase = true) ||
+                item.description.contains(searchQuery, ignoreCase = true) ||
+                item.addressText.contains(searchQuery, ignoreCase = true)
+            }
+        } else {
+            items
+        }
+        adapter.setItems(filteredItems)
+        tvEmpty.visibility = if (filteredItems.isEmpty()) View.VISIBLE else View.GONE
+        recyclerView.visibility = if (filteredItems.isEmpty()) View.GONE else View.VISIBLE
         swipeRefresh.isRefreshing = false
+    }
+
+    /**
+     * 更新搜索关键词
+     */
+    fun updateSearchQuery(query: String) {
+        searchQuery = query
+        loadData()
     }
 
     override fun onResume() {

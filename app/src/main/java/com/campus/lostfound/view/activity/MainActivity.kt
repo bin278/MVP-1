@@ -2,6 +2,9 @@ package com.campus.lostfound.view.activity
 
 import android.content.Intent
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
+import android.widget.EditText
 import androidx.fragment.app.Fragment
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
@@ -22,10 +25,12 @@ class MainActivity : BaseActivity() {
     private lateinit var viewPager: ViewPager2
     private lateinit var tabLayout: TabLayout
     private lateinit var bottomNav: BottomNavigationView
+    private lateinit var etSearch: EditText
     private lateinit var itemDao: ItemDao
     private lateinit var userManager: UserManager
 
     private val tabTitles = listOf("全部", "失物", "招领")
+    private var currentSearchQuery: String = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -49,16 +54,20 @@ class MainActivity : BaseActivity() {
         viewPager = findViewById(R.id.viewPager)
         tabLayout = findViewById(R.id.tabLayout)
         bottomNav = findViewById(R.id.bottomNav)
+        etSearch = findViewById(R.id.etSearch)
+
+        // 设置搜索框文本变化监听
+        setupSearchListener()
 
         viewPager.adapter = object : FragmentStateAdapter(this) {
             override fun getItemCount() = 4
             override fun createFragment(position: Int): Fragment {
                 return when (position) {
-                    0 -> ItemListFragment.newInstance(null)
-                    1 -> ItemListFragment.newInstance("lost")
-                    2 -> ItemListFragment.newInstance("found")
+                    0 -> ItemListFragment.newInstance(null, currentSearchQuery)
+                    1 -> ItemListFragment.newInstance("lost", currentSearchQuery)
+                    2 -> ItemListFragment.newInstance("found", currentSearchQuery)
                     3 -> ProfileFragment()
-                    else -> ItemListFragment.newInstance(null)
+                    else -> ItemListFragment.newInstance(null, currentSearchQuery)
                 }
             }
         }
@@ -102,6 +111,34 @@ class MainActivity : BaseActivity() {
                 bottomNav.menu.findItem(navItemId)?.isChecked = true
             }
         })
+    }
+
+    /**
+     * 设置搜索框监听
+     */
+    private fun setupSearchListener() {
+        etSearch.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                currentSearchQuery = s?.toString() ?: ""
+                // 刷新当前Fragment的数据
+                refreshCurrentFragment()
+            }
+        })
+    }
+
+    /**
+     * 刷新当前显示的Fragment
+     */
+    private fun refreshCurrentFragment() {
+        val currentPosition = viewPager.currentItem
+        when (currentPosition) {
+            0, 1, 2 -> {
+                // 重新创建Fragment以应用新的搜索关键词
+                viewPager.adapter?.notifyItemChanged(currentPosition)
+            }
+        }
     }
 
     private fun addTestData() {
