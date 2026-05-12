@@ -31,6 +31,8 @@ class MainActivity : BaseActivity() {
 
     private val tabTitles = listOf("全部", "失物", "招领")
     private var currentSearchQuery: String = ""
+    // 保存三个列表Fragment的引用
+    private val fragmentList = mutableListOf<ItemListFragment?>(null, null, null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -63,9 +65,9 @@ class MainActivity : BaseActivity() {
             override fun getItemCount() = 4
             override fun createFragment(position: Int): Fragment {
                 return when (position) {
-                    0 -> ItemListFragment.newInstance(null, currentSearchQuery)
-                    1 -> ItemListFragment.newInstance("lost", currentSearchQuery)
-                    2 -> ItemListFragment.newInstance("found", currentSearchQuery)
+                    0 -> ItemListFragment.newInstance(null, currentSearchQuery).also { fragmentList[0] = it }
+                    1 -> ItemListFragment.newInstance("lost", currentSearchQuery).also { fragmentList[1] = it }
+                    2 -> ItemListFragment.newInstance("found", currentSearchQuery).also { fragmentList[2] = it }
                     3 -> ProfileFragment()
                     else -> ItemListFragment.newInstance(null, currentSearchQuery)
                 }
@@ -122,22 +124,18 @@ class MainActivity : BaseActivity() {
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) {
                 currentSearchQuery = s?.toString() ?: ""
-                // 刷新当前Fragment的数据
-                refreshCurrentFragment()
+                // 直接更新所有三个列表Fragment
+                updateAllFragmentsSearch()
             }
         })
     }
 
     /**
-     * 刷新当前显示的Fragment
+     * 更新所有Fragment的搜索关键词
      */
-    private fun refreshCurrentFragment() {
-        val currentPosition = viewPager.currentItem
-        when (currentPosition) {
-            0, 1, 2 -> {
-                // 重新创建Fragment以应用新的搜索关键词
-                viewPager.adapter?.notifyItemChanged(currentPosition)
-            }
+    private fun updateAllFragmentsSearch() {
+        for (i in 0..2) {
+            fragmentList[i]?.updateSearchQuery(currentSearchQuery)
         }
     }
 
