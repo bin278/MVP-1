@@ -136,7 +136,7 @@ class DetailActivity : BaseActivity() {
         if (item.latitude != 0.0 && item.longitude != 0.0) {
             cardMap.visibility = View.VISIBLE
 
-            val staticMapUrl = "https://staticmap.openstreetmap.de/staticmap.php?center=${item.latitude},${item.longitude}&zoom=16&size=800x400&markers=${item.latitude},${item.longitude},red-pushpin"
+            val staticMapUrl = "https://restapi.amap.com/v3/staticmap?location=${item.longitude},${item.latitude}&zoom=15&size=400*200&markers=mid,0xFF0000,A:${item.longitude},${item.latitude}&key=${Constants.AMAP_API_KEY}"
             Glide.with(this).load(staticMapUrl).into(ivStaticMap)
 
             tvMapCoords.text = "坐标: ${String.format("%.6f", item.latitude)}, ${String.format("%.6f", item.longitude)}"
