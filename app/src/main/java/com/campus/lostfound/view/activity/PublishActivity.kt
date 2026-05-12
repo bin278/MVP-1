@@ -49,6 +49,8 @@ class PublishActivity : BaseActivity() {
     companion object {
         // 位置权限请求码
         private const val LOCATION_PERMISSION_REQUEST = 1002
+        // 相机权限请求码
+        private const val CAMERA_PERMISSION_REQUEST = 1003
     }
 
     // 数据管理
@@ -269,11 +271,29 @@ class PublishActivity : BaseActivity() {
      * 打开相机拍照
      */
     private fun openCamera() {
-        val imageFile = File(createImageDir(), "IMG_${System.currentTimeMillis()}.jpg")
-        cameraImageUri = FileProvider.getUriForFile(this, "${packageName}.fileprovider", imageFile)
-        val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-        intent.putExtra(MediaStore.EXTRA_OUTPUT, cameraImageUri)
-        cameraLauncher.launch(intent)
+        // 检查相机权限
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+            != PackageManager.PERMISSION_GRANTED) {
+            // 请求相机权限
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.CAMERA),
+                CAMERA_PERMISSION_REQUEST
+            )
+            return
+        }
+
+        // 权限已授予，打开相机
+        try {
+            val imageFile = File(createImageDir(), "IMG_${System.currentTimeMillis()}.jpg")
+            cameraImageUri = FileProvider.getUriForFile(this, "${packageName}.fileprovider", imageFile)
+            val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+            intent.putExtra(MediaStore.EXTRA_OUTPUT, cameraImageUri)
+            cameraLauncher.launch(intent)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Toast.makeText(this, "无法打开相机", Toast.LENGTH_SHORT).show()
+        }
     }
 
     /**
@@ -520,11 +540,23 @@ class PublishActivity : BaseActivity() {
         requestCode: Int, permissions: Array<out String>, grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        
+        // 处理位置权限请求
         if (requestCode == LOCATION_PERMISSION_REQUEST) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 startGpsLocation()
             } else {
                 Toast.makeText(this, "需要位置权限才能使用GPS定位", Toast.LENGTH_LONG).show()
+            }
+        }
+        
+        // 处理相机权限请求
+        if (requestCode == CAMERA_PERMISSION_REQUEST) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // 权限已授予，重新打开相机
+                openCamera()
+            } else {
+                Toast.makeText(this, "需要相机权限才能拍照", Toast.LENGTH_LONG).show()
             }
         }
     }
