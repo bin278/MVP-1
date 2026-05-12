@@ -134,6 +134,12 @@ class PublishActivity : BaseActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_publish)
 
+        // 设置返回按钮
+        val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
+        toolbar.setNavigationOnClickListener {
+            finish()
+        }
+
         // 初始化数据管理对象
         userManager = UserManager(this)
         itemDao = ItemDao(this)
