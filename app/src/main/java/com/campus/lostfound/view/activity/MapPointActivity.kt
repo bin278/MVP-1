@@ -26,6 +26,9 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 import java.util.Locale
 
+/**
+ * 校园地点数据类
+ */
 data class CampusLocation(
     val name: String,
     val detail: String,
@@ -33,12 +36,21 @@ data class CampusLocation(
     val longitude: Double
 )
 
+/**
+ * 地图选点页面
+ * 用于选择物品丢失或发现的地点，支持：
+ * - 从预设校园地点中选择
+ * - 搜索过滤地点
+ * - GPS定位获取当前位置
+ * - 手动输入经纬度
+ */
 class MapPointActivity : BaseActivity() {
 
     companion object {
         private const val LOCATION_PERMISSION_REQUEST = 1001
     }
 
+    // 预设校园地点列表
     private val campusLocations = listOf(
         CampusLocation("图书馆", "主校区图书馆", 30.755, 103.935),
         CampusLocation("第一教学楼", "主校区教学楼A栋", 30.756, 103.936),
@@ -57,7 +69,9 @@ class MapPointActivity : BaseActivity() {
         CampusLocation("北门", "主校区北大门", 30.763, 103.936)
     )
 
+    // 过滤后的地点列表
     private var filteredLocations = campusLocations
+    // 选中的位置信息
     private var selectedLatitude: Double = 0.0
     private var selectedLongitude: Double = 0.0
     private var selectedAddress: String = ""
@@ -73,6 +87,7 @@ class MapPointActivity : BaseActivity() {
 
         locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
 
+        // 初始化视图组件
         val etSearch = findViewById<TextInputEditText>(R.id.etSearch)
         val recyclerView = findViewById<RecyclerView>(R.id.recyclerLocations)
         val tvSelectedAddress = findViewById<TextView>(R.id.tvSelectedAddress)
@@ -81,6 +96,7 @@ class MapPointActivity : BaseActivity() {
         val btnConfirm = findViewById<MaterialButton>(R.id.btnConfirm)
         val btnCurrentLocation = findViewById<MaterialButton>(R.id.btnCurrentLocation)
 
+        // 设置RecyclerView适配器
         adapter = LocationAdapter(filteredLocations) { location ->
             selectLocation(location.latitude, location.longitude, location.name, tvSelectedAddress, etLatitude, etLongitude)
         }
@@ -88,6 +104,7 @@ class MapPointActivity : BaseActivity() {
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
 
+        // 搜索框监听：实时过滤地点
         etSearch.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
@@ -96,11 +113,14 @@ class MapPointActivity : BaseActivity() {
             }
         })
 
+        // GPS定位按钮
         btnCurrentLocation.setOnClickListener {
             requestCurrentLocation(tvSelectedAddress, etLatitude, etLongitude)
         }
 
+        // 确认按钮：返回选择的地点
         btnConfirm.setOnClickListener {
+            // 如果未选择，尝试从输入框获取
             if (selectedLatitude == 0.0 && selectedLongitude == 0.0) {
                 val lat = etLatitude.text.toString().toDoubleOrNull() ?: 0.0
                 val lng = etLongitude.text.toString().toDoubleOrNull() ?: 0.0
@@ -111,11 +131,13 @@ class MapPointActivity : BaseActivity() {
                 }
             }
 
+            // 验证是否已选择地点
             if (selectedLatitude == 0.0 && selectedLongitude == 0.0) {
                 Toast.makeText(this, "请选择地点或使用GPS定位", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
+            // 返回结果给上一个页面
             val intent = Intent()
             intent.putExtra("latitude", selectedLatitude)
             intent.putExtra("longitude", selectedLongitude)
@@ -125,6 +147,9 @@ class MapPointActivity : BaseActivity() {
         }
     }
 
+    /**
+     * 根据搜索词过滤地点列表
+     */
     private fun filterLocations(query: String) {
         filteredLocations = if (query.isBlank()) {
             campusLocations
@@ -137,6 +162,9 @@ class MapPointActivity : BaseActivity() {
         adapter.updateData(filteredLocations)
     }
 
+    /**
+     * 选择地点并更新界面
+     */
     private fun selectLocation(
         lat: Double, lng: Double, address: String,
         tvSelectedAddress: TextView, etLatitude: TextInputEditText, etLongitude: TextInputEditText
@@ -149,6 +177,9 @@ class MapPointActivity : BaseActivity() {
         etLongitude.setText(String.format("%.6f", lng))
     }
 
+    /**
+     * 请求当前位置权限
+     */
     private fun requestCurrentLocation(
         tvSelectedAddress: TextView, etLatitude: TextInputEditText, etLongitude: TextInputEditText
     ) {
@@ -167,6 +198,9 @@ class MapPointActivity : BaseActivity() {
         startLocationRequest(tvSelectedAddress, etLatitude, etLongitude)
     }
 
+    /**
+     * 开始定位请求
+     */
     @SuppressLint("MissingPermission")
     private fun startLocationRequest(
         tvSelectedAddress: TextView, etLatitude: TextInputEditText, etLongitude: TextInputEditText
@@ -174,6 +208,7 @@ class MapPointActivity : BaseActivity() {
         isLocating = true
         Toast.makeText(this, "正在获取位置...", Toast.LENGTH_SHORT).show()
 
+        // 先尝试获取最后已知位置
         val lastKnownLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
             ?: locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
 
@@ -183,6 +218,7 @@ class MapPointActivity : BaseActivity() {
             return
         }
 
+        // 注册位置监听器获取新位置
         val locationListener = object : LocationListener {
             override fun onLocationChanged(location: Location) {
                 locationManager.removeUpdates(this)
@@ -212,6 +248,9 @@ class MapPointActivity : BaseActivity() {
         }
     }
 
+    /**
+     * 位置获取成功回调
+     */
     private fun onLocationReceived(
         location: Location,
         tvSelectedAddress: TextView, etLatitude: TextInputEditText, etLongitude: TextInputEditText
@@ -224,6 +263,9 @@ class MapPointActivity : BaseActivity() {
         Toast.makeText(this, "定位成功: $address", Toast.LENGTH_SHORT).show()
     }
 
+    /**
+     * 反向地理编码：将经纬度转换为地址文字
+     */
     private fun reverseGeocode(lat: Double, lng: Double): String {
         return try {
             val geocoder = Geocoder(this, Locale.CHINA)
@@ -252,6 +294,9 @@ class MapPointActivity : BaseActivity() {
         }
     }
 
+    /**
+     * 权限请求结果回调
+     */
     override fun onRequestPermissionsResult(
         requestCode: Int, permissions: Array<out String>, grantResults: IntArray
     ) {
@@ -268,6 +313,9 @@ class MapPointActivity : BaseActivity() {
         }
     }
 
+    /**
+     * 地点列表RecyclerView适配器
+     */
     inner class LocationAdapter(
         private var locations: List<CampusLocation>,
         private val onClick: (CampusLocation) -> Unit

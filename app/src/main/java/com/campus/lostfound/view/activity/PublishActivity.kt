@@ -40,17 +40,24 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 
+/**
+ * 发布/编辑物品页面
+ * 支持发布失物/招领信息，添加图片、选择地点、GPS定位、AI分类等功能
+ */
 class PublishActivity : BaseActivity() {
 
     companion object {
+        // 位置权限请求码
         private const val LOCATION_PERMISSION_REQUEST = 1002
     }
 
+    // 数据管理
     private lateinit var userManager: UserManager
     private lateinit var itemDao: ItemDao
     private lateinit var aiHelper: AiHelper
     private lateinit var locationManager: LocationManager
 
+    // 视图组件
     private lateinit var chipGroupType: ChipGroup
     private lateinit var chipLost: Chip
     private lateinit var chipFound: Chip
@@ -64,6 +71,7 @@ class PublishActivity : BaseActivity() {
     private lateinit var ivPreview: ImageView
     private lateinit var btnSubmit: MaterialButton
 
+    // 状态变量
     private var imagePath: String = ""
     private var selectedLatitude: Double = 0.0
     private var selectedLongitude: Double = 0.0
@@ -71,8 +79,10 @@ class PublishActivity : BaseActivity() {
     private var editItemId: Long = -1
     private var isLocating = false
 
+    // 相机拍照临时URI
     private var cameraImageUri: Uri? = null
 
+    // 相机拍照Launcher
     private val cameraLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -87,6 +97,7 @@ class PublishActivity : BaseActivity() {
         }
     }
 
+    // 相册选择Launcher
     private val galleryLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -101,6 +112,7 @@ class PublishActivity : BaseActivity() {
         }
     }
 
+    // 地图选点Launcher
     private val mapPointLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -120,23 +132,29 @@ class PublishActivity : BaseActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_publish)
 
+        // 初始化数据管理对象
         userManager = UserManager(this)
         itemDao = ItemDao(this)
         aiHelper = AiHelper()
         locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
 
+        // 检查登录状态
         if (!userManager.isLoggedIn()) {
             Toast.makeText(this, "请先登录", Toast.LENGTH_SHORT).show()
             finish()
             return
         }
 
+        // 初始化页面
         initViews()
         setupCategoryDropdown()
         setupListeners()
         checkEditMode()
     }
 
+    /**
+     * 初始化视图组件
+     */
     private fun initViews() {
         chipGroupType = findViewById(R.id.chipGroupType)
         chipLost = findViewById(R.id.chipLost)
@@ -151,32 +169,44 @@ class PublishActivity : BaseActivity() {
         ivPreview = findViewById(R.id.ivPreview)
         btnSubmit = findViewById(R.id.btnSubmit)
 
+        // 默认选择"失物"类型
         chipLost.isChecked = true
     }
 
+    /**
+     * 设置分类下拉框
+     */
     private fun setupCategoryDropdown() {
         val adapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, Constants.CATEGORIES)
         actvCategory.setAdapter(adapter)
     }
 
+    /**
+     * 设置所有按钮和控件的点击事件
+     */
     private fun setupListeners() {
+        // 拍照按钮
         findViewById<MaterialButton>(R.id.btnCamera).setOnClickListener {
             openCamera()
         }
 
+        // 相册选择按钮
         findViewById<MaterialButton>(R.id.btnGallery).setOnClickListener {
             openGallery()
         }
 
+        // 地图选点按钮
         findViewById<MaterialButton>(R.id.btnMapPick).setOnClickListener {
             val intent = Intent(this, MapPointActivity::class.java)
             mapPointLauncher.launch(intent)
         }
 
+        // GPS定位按钮
         findViewById<MaterialButton>(R.id.btnGpsLocate).setOnClickListener {
             requestGpsLocation()
         }
 
+        // AI分类按钮
         findViewById<MaterialButton>(R.id.btnAiClassify).setOnClickListener {
             val name = etName.text.toString().trim()
             if (name.isNotEmpty()) {
@@ -188,30 +218,40 @@ class PublishActivity : BaseActivity() {
             }
         }
 
+        // 时间选择点击
         etTime.setOnClickListener {
             showDatePicker()
         }
 
+        // 提交按钮
         btnSubmit.setOnClickListener {
             submitItem()
         }
     }
 
+    /**
+     * 检查是否是编辑模式
+     * 如果是编辑模式，填充原物品信息
+     */
     private fun checkEditMode() {
         editItemId = intent.getLongExtra("item_id", -1)
         if (editItemId > 0) {
             val item = itemDao.queryById(editItemId) ?: return
+            // 填充物品信息
             etName.setText(item.name)
             actvCategory.setText(item.category, false)
             etLocation.setText(item.location)
             etTime.setText(item.time)
             etContact.setText(item.contact)
             etDescription.setText(item.description)
+            // 设置类型
             if (item.type == Constants.ITEM_TYPE_LOST) chipLost.isChecked = true else chipFound.isChecked = true
+            // 显示图片
             if (item.imagePath.isNotEmpty()) {
                 imagePath = item.imagePath
                 showPreview(imagePath)
             }
+            // 设置位置信息
             selectedLatitude = item.latitude
             selectedLongitude = item.longitude
             selectedAddressText = item.addressText
@@ -219,11 +259,15 @@ class PublishActivity : BaseActivity() {
                 tvAddressInfo.text = "经度: $selectedLongitude, 纬度: $selectedLatitude"
                 tvAddressInfo.visibility = android.view.View.VISIBLE
             }
+            // 修改按钮文字和标题
             btnSubmit.text = "更新"
             title = "编辑信息"
         }
     }
 
+    /**
+     * 打开相机拍照
+     */
     private fun openCamera() {
         val imageFile = File(createImageDir(), "IMG_${System.currentTimeMillis()}.jpg")
         cameraImageUri = FileProvider.getUriForFile(this, "${packageName}.fileprovider", imageFile)
@@ -232,17 +276,28 @@ class PublishActivity : BaseActivity() {
         cameraLauncher.launch(intent)
     }
 
+    /**
+     * 打开相册选择图片
+     */
     private fun openGallery() {
         val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
         galleryLauncher.launch(intent)
     }
 
+    /**
+     * 创建图片存储目录
+     */
     private fun createImageDir(): File {
         val dir = File(filesDir, Constants.IMAGE_DIR)
         if (!dir.exists()) dir.mkdirs()
         return dir
     }
 
+    /**
+     * 从URI保存图片到本地
+     * @param uri 图片URI
+     * @return 保存后的文件路径
+     */
     private fun saveImageFromUri(uri: Uri): String? {
         return try {
             val inputStream = contentResolver.openInputStream(uri) ?: return null
@@ -258,11 +313,17 @@ class PublishActivity : BaseActivity() {
         }
     }
 
+    /**
+     * 显示图片预览
+     */
     private fun showPreview(path: String) {
         ivPreview.visibility = android.view.View.VISIBLE
         Glide.with(this).load(File(path)).centerCrop().into(ivPreview)
     }
 
+    /**
+     * 显示日期选择器
+     */
     private fun showDatePicker() {
         val calendar = Calendar.getInstance()
         val datePickerDialog = DatePickerDialog(
@@ -278,7 +339,11 @@ class PublishActivity : BaseActivity() {
         datePickerDialog.show()
     }
 
+    /**
+     * 提交物品信息
+     */
     private fun submitItem() {
+        // 获取表单数据
         val type = if (chipLost.isChecked) Constants.ITEM_TYPE_LOST else Constants.ITEM_TYPE_FOUND
         val name = etName.text.toString().trim()
         val category = actvCategory.text.toString().trim()
@@ -287,6 +352,7 @@ class PublishActivity : BaseActivity() {
         val contact = etContact.text.toString().trim()
         val description = etDescription.text.toString().trim()
 
+        // 验证必填项
         if (name.isEmpty()) {
             Toast.makeText(this, "请输入物品名称", Toast.LENGTH_SHORT).show()
             return
@@ -303,6 +369,7 @@ class PublishActivity : BaseActivity() {
             return
         }
 
+        // 创建物品对象
         val item = Item(
             id = if (editItemId > 0) editItemId else 0,
             type = type,
@@ -320,6 +387,7 @@ class PublishActivity : BaseActivity() {
             addressText = selectedAddressText
         )
 
+        // 插入或更新数据库
         val success = if (editItemId > 0) {
             itemDao.update(item) > 0
         } else {
@@ -334,6 +402,9 @@ class PublishActivity : BaseActivity() {
         }
     }
 
+    /**
+     * 请求GPS定位权限
+     */
     private fun requestGpsLocation() {
         if (isLocating) return
 
@@ -350,11 +421,15 @@ class PublishActivity : BaseActivity() {
         startGpsLocation()
     }
 
+    /**
+     * 开始GPS定位
+     */
     @SuppressLint("MissingPermission")
     private fun startGpsLocation() {
         isLocating = true
         Toast.makeText(this, "正在获取位置...", Toast.LENGTH_SHORT).show()
 
+        // 先尝试获取最后已知位置
         val lastKnownLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
             ?: locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
 
@@ -364,6 +439,7 @@ class PublishActivity : BaseActivity() {
             return
         }
 
+        // 注册位置监听器获取新位置
         val locationListener = object : LocationListener {
             override fun onLocationChanged(location: Location) {
                 locationManager.removeUpdates(this)
@@ -393,6 +469,9 @@ class PublishActivity : BaseActivity() {
         }
     }
 
+    /**
+     * GPS位置获取成功回调
+     */
     private fun onGpsLocationReceived(location: Location) {
         selectedLatitude = location.latitude
         selectedLongitude = location.longitude
@@ -403,6 +482,9 @@ class PublishActivity : BaseActivity() {
         Toast.makeText(this, "定位成功: $selectedAddressText", Toast.LENGTH_SHORT).show()
     }
 
+    /**
+     * 反向地理编码：将经纬度转换为地址文字
+     */
     private fun reverseGeocode(lat: Double, lng: Double): String {
         return try {
             val geocoder = Geocoder(this, Locale.CHINA)
@@ -431,6 +513,9 @@ class PublishActivity : BaseActivity() {
         }
     }
 
+    /**
+     * 权限请求结果回调
+     */
     override fun onRequestPermissionsResult(
         requestCode: Int, permissions: Array<out String>, grantResults: IntArray
     ) {
