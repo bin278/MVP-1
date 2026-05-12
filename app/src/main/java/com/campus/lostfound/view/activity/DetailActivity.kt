@@ -59,6 +59,7 @@ class DetailActivity : BaseActivity() {
         val tvName = findViewById<TextView>(R.id.tvDetailName)
         val tvCategory = findViewById<TextView>(R.id.tvDetailCategory)
         val tvLocation = findViewById<TextView>(R.id.tvDetailLocation)
+        val tvAddress = findViewById<TextView>(R.id.tvDetailAddress)
         val tvTime = findViewById<TextView>(R.id.tvDetailTime)
         val tvContact = findViewById<TextView>(R.id.tvDetailContact)
         val tvPublisher = findViewById<TextView>(R.id.tvDetailPublisher)
@@ -66,8 +67,13 @@ class DetailActivity : BaseActivity() {
 
         tvName.text = item.name
         tvCategory.text = item.category.ifEmpty { "未分类" }
-        val displayLocation = if (item.addressText.isNotEmpty()) item.addressText else item.location
-        tvLocation.text = displayLocation.ifEmpty { "未标记地点" }
+        tvLocation.text = item.location.ifEmpty { "未标记地点" }
+        if (item.addressText.isNotEmpty()) {
+            tvAddress.text = "详细地址: ${item.addressText}"
+            tvAddress.visibility = View.VISIBLE
+        } else {
+            tvAddress.visibility = View.GONE
+        }
         tvTime.text = item.time.ifEmpty { "未指定时间" }
         tvContact.text = item.contact
         tvPublisher.text = item.publisher
@@ -153,12 +159,13 @@ class DetailActivity : BaseActivity() {
 
     private fun openNavigation(lat: Double, lng: Double) {
         val addressLabel = item?.addressText?.ifEmpty { item?.location } ?: "目标地点"
-        try {
+        
+        if (isAppInstalled("com.autonavi.minimap")) {
             val uri = Uri.parse("androidamap://route/plan/?dlat=$lat&dlon=$lng&dname=$addressLabel&dev=0&t=0")
             val intent = Intent(Intent.ACTION_VIEW, uri)
             intent.setPackage("com.autonavi.minimap")
             startActivity(intent)
-        } catch (e1: Exception) {
+        } else {
             try {
                 val uri = Uri.parse("baidumap://map/direction?destination=latlng:$lat,$lng|name:$addressLabel&mode=driving")
                 val intent = Intent(Intent.ACTION_VIEW, uri)
@@ -175,6 +182,15 @@ class DetailActivity : BaseActivity() {
                     clipboard.setPrimaryClip(clip)
                 }
             }
+        }
+    }
+
+    private fun isAppInstalled(packageName: String): Boolean {
+        return try {
+            packageManager.getApplicationInfo(packageName, 0)
+            true
+        } catch (e: Exception) {
+            false
         }
     }
 

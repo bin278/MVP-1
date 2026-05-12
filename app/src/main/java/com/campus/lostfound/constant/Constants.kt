@@ -13,7 +13,7 @@ object Constants {
 
     const val IMAGE_DIR = "images"
 
-    const val AMAP_API_KEY = "YOUR_AMAP_API_KEY"
+    const val AMAP_API_KEY = "a82677ccfb3f2256fa651d39cc78c591"
 
     val CATEGORIES = arrayOf(
         "电子产品", "证件卡片", "钥匙钱包", "书籍文具",
