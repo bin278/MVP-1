@@ -9,6 +9,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import com.bumptech.glide.Glide
+import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.campus.lostfound.R
 import com.campus.lostfound.constant.Constants
 import com.campus.lostfound.db.FavoriteDao
@@ -175,12 +176,11 @@ class DetailActivity : BaseActivity() {
         if (item.latitude != 0.0 && item.longitude != 0.0) {
             cardMap.visibility = View.VISIBLE
 
-            // 使用高德地图静态API获取地图图片
-            val staticMapUrl = "https://restapi.amap.com/v3/staticmap?location=${item.longitude},${item.latitude}&zoom=15&size=400*200&markers=mid,0xFF0000,A:${item.longitude},${item.latitude}&key=${Constants.AMAP_API_KEY}"
-            Glide.with(this).load(staticMapUrl).into(ivStaticMap)
-
             // 显示坐标信息
             tvMapCoords.text = "坐标: ${String.format("%.6f", item.latitude)}, ${String.format("%.6f", item.longitude)}"
+
+            // 先尝试使用高德地图静态API
+            loadStaticMap(item.longitude, item.latitude, ivStaticMap)
 
             // 点击地图图片也可以导航
             ivStaticMap.setOnClickListener {
@@ -192,6 +192,46 @@ class DetailActivity : BaseActivity() {
                 openNavigation(item.latitude, item.longitude)
             }
         }
+    }
+
+    /**
+     * 加载静态地图图片
+     * 优先使用高德地图API，失败则使用OpenStreetMap静态图片服务作为备用
+     */
+    private fun loadStaticMap(lng: Double, lat: Double, ivStaticMap: ImageView) {
+        // 方案1：使用高德地图静态API
+        val amapUrl = "https://restapi.amap.com/v3/staticmap?location=$lng,$lat&zoom=15&size=400*200&markers=mid,0xFF0000,A:$lng,$lat&key=${Constants.AMAP_API_KEY}"
+        
+        // 方案2：备用方案 - 使用OpenStreetMap静态瓦片拼接（无需API Key）
+        // 计算瓦片坐标
+        val zoom = 15
+        val tileX = lon2tile(lng, zoom)
+        val tileY = lat2tile(lat, zoom)
+        val osmTileUrl = "https://tile.openstreetmap.org/$zoom/$tileX/$tileY.png"
+        
+        Glide.with(this)
+            .load(amapUrl)
+            .diskCacheStrategy(DiskCacheStrategy.NONE)
+            .skipMemoryCache(true)
+            .error(Glide.with(this)
+                .load(osmTileUrl)
+                .error(android.R.drawable.ic_menu_mapmode))
+            .into(ivStaticMap)
+    }
+
+    /**
+     * 经度转瓦片X坐标
+     */
+    private fun lon2tile(lon: Double, zoom: Int): Int {
+        return ((lon + 180) / 360 * Math.pow(2.0, zoom.toDouble())).toInt()
+    }
+
+    /**
+     * 纬度转瓦片Y坐标
+     */
+    private fun lat2tile(lat: Double, zoom: Int): Int {
+        val latRad = Math.toRadians(lat)
+        return ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * Math.pow(2.0, zoom.toDouble())).toInt()
     }
 
     /**
