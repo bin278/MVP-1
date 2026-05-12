@@ -146,6 +146,16 @@
                         android:layout_marginStart="8dp"
                         android:textSize="12sp"
                         app:cornerRadius="20dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnGpsLocate"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="定位"
+                        android:layout_marginStart="4dp"
+                        android:textSize="12sp"
+                        app:cornerRadius="20dp"
+                        app:icon="@android:drawable/ic_menu_compass" />
                 </LinearLayout>
 
                 <TextView

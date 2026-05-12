@@ -1,7 +1,15 @@
 package com.campus.lostfound.view.activity
 
+import android.Manifest
+import android.annotation.SuppressLint
 import android.app.DatePickerDialog
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.location.Address
+import android.location.Geocoder
+import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
@@ -11,6 +19,8 @@ import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import com.bumptech.glide.Glide
 import com.campus.lostfound.R
@@ -32,9 +42,14 @@ import java.util.Locale
 
 class PublishActivity : BaseActivity() {
 
+    companion object {
+        private const val LOCATION_PERMISSION_REQUEST = 1002
+    }
+
     private lateinit var userManager: UserManager
     private lateinit var itemDao: ItemDao
     private lateinit var aiHelper: AiHelper
+    private lateinit var locationManager: LocationManager
 
     private lateinit var chipGroupType: ChipGroup
     private lateinit var chipLost: Chip
@@ -54,6 +69,7 @@ class PublishActivity : BaseActivity() {
     private var selectedLongitude: Double = 0.0
     private var selectedAddressText: String = ""
     private var editItemId: Long = -1
+    private var isLocating = false
 
     private var cameraImageUri: Uri? = null
 
@@ -107,6 +123,7 @@ class PublishActivity : BaseActivity() {
         userManager = UserManager(this)
         itemDao = ItemDao(this)
         aiHelper = AiHelper()
+        locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
 
         if (!userManager.isLoggedIn()) {
             Toast.makeText(this, "请先登录", Toast.LENGTH_SHORT).show()
@@ -154,6 +171,10 @@ class PublishActivity : BaseActivity() {
         findViewById<MaterialButton>(R.id.btnMapPick).setOnClickListener {
             val intent = Intent(this, MapPointActivity::class.java)
             mapPointLauncher.launch(intent)
+        }
+
+        findViewById<MaterialButton>(R.id.btnGpsLocate).setOnClickListener {
+            requestGpsLocation()
         }
 
         findViewById<MaterialButton>(R.id.btnAiClassify).setOnClickListener {
@@ -310,6 +331,116 @@ class PublishActivity : BaseActivity() {
             finish()
         } else {
             Toast.makeText(this, getString(R.string.publish_fail), Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun requestGpsLocation() {
+        if (isLocating) return
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+            != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
+                LOCATION_PERMISSION_REQUEST
+            )
+            return
+        }
+
+        startGpsLocation()
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun startGpsLocation() {
+        isLocating = true
+        Toast.makeText(this, "正在获取位置...", Toast.LENGTH_SHORT).show()
+
+        val lastKnownLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+            ?: locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+
+        if (lastKnownLocation != null) {
+            onGpsLocationReceived(lastKnownLocation)
+            isLocating = false
+            return
+        }
+
+        val locationListener = object : LocationListener {
+            override fun onLocationChanged(location: Location) {
+                locationManager.removeUpdates(this)
+                onGpsLocationReceived(location)
+                isLocating = false
+            }
+
+            @Deprecated("Deprecated in Java")
+            override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
+            override fun onProviderEnabled(provider: String) {}
+            override fun onProviderDisabled(provider: String) {}
+        }
+
+        try {
+            locationManager.requestLocationUpdates(
+                LocationManager.GPS_PROVIDER, 0L, 0f, locationListener
+            )
+        } catch (e: Exception) {
+            try {
+                locationManager.requestLocationUpdates(
+                    LocationManager.NETWORK_PROVIDER, 0L, 0f, locationListener
+                )
+            } catch (e2: Exception) {
+                isLocating = false
+                Toast.makeText(this, "无法获取位置，请检查GPS是否开启", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun onGpsLocationReceived(location: Location) {
+        selectedLatitude = location.latitude
+        selectedLongitude = location.longitude
+        selectedAddressText = reverseGeocode(location.latitude, location.longitude)
+        etLocation.setText(selectedAddressText)
+        tvAddressInfo.text = "经度: $selectedLongitude, 纬度: $selectedLatitude"
+        tvAddressInfo.visibility = android.view.View.VISIBLE
+        Toast.makeText(this, "定位成功: $selectedAddressText", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun reverseGeocode(lat: Double, lng: Double): String {
+        return try {
+            val geocoder = Geocoder(this, Locale.CHINA)
+            val addresses: List<Address>? = geocoder.getFromLocation(lat, lng, 1)
+            if (!addresses.isNullOrEmpty()) {
+                val address = addresses[0]
+                val sb = StringBuilder()
+                address.thoroughfare?.let { sb.append(it) }
+                address.featureName?.let {
+                    if (sb.isNotEmpty()) sb.append("附近")
+                }
+                if (sb.isEmpty()) {
+                    address.locality?.let { sb.append(it) }
+                    address.subLocality?.let { sb.append(it) }
+                }
+                if (sb.isEmpty()) {
+                    String.format("经度%.4f, 纬度%.4f", lng, lat)
+                } else {
+                    sb.toString()
+                }
+            } else {
+                String.format("经度%.4f, 纬度%.4f", lng, lat)
+            }
+        } catch (e: Exception) {
+            String.format("经度%.4f, 纬度%.4f", lng, lat)
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int, permissions: Array<out String>, grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == LOCATION_PERMISSION_REQUEST) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                startGpsLocation()
+            } else {
+                Toast.makeText(this, "需要位置权限才能使用GPS定位", Toast.LENGTH_LONG).show()
+            }
         }
     }
 }

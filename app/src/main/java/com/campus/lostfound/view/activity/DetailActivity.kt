@@ -131,12 +131,15 @@ class DetailActivity : BaseActivity() {
         val cardMap = findViewById<MaterialCardView>(R.id.cardMap)
         val ivStaticMap = findViewById<ImageView>(R.id.ivStaticMap)
         val btnNavigate = findViewById<MaterialButton>(R.id.btnNavigate)
+        val tvMapCoords = findViewById<TextView>(R.id.tvMapCoords)
 
         if (item.latitude != 0.0 && item.longitude != 0.0) {
             cardMap.visibility = View.VISIBLE
 
-            val staticMapUrl = "https://restapi.amap.com/v3/staticmap?location=${item.longitude},${item.latitude}&zoom=15&size=400*200&markers=mid,0xFF0000,A:${item.longitude},${item.latitude}&key=你的高德Key"
+            val staticMapUrl = "https://staticmap.openstreetmap.de/staticmap.php?center=${item.latitude},${item.longitude}&zoom=16&size=800x400&markers=${item.latitude},${item.longitude},red-pushpin"
             Glide.with(this).load(staticMapUrl).into(ivStaticMap)
+
+            tvMapCoords.text = "坐标: ${String.format("%.6f", item.latitude)}, ${String.format("%.6f", item.longitude)}"
 
             ivStaticMap.setOnClickListener {
                 openNavigation(item.latitude, item.longitude)
@@ -149,15 +152,29 @@ class DetailActivity : BaseActivity() {
     }
 
     private fun openNavigation(lat: Double, lng: Double) {
+        val addressLabel = item?.addressText?.ifEmpty { item?.location } ?: "目标地点"
         try {
-            val uri = Uri.parse("androidamap://route/plan/?dlat=$lat&dlon=$lng&dev=0&t=0")
+            val uri = Uri.parse("androidamap://route/plan/?dlat=$lat&dlon=$lng&dname=$addressLabel&dev=0&t=0")
             val intent = Intent(Intent.ACTION_VIEW, uri)
             intent.setPackage("com.autonavi.minimap")
             startActivity(intent)
-        } catch (e: Exception) {
-            val uri = Uri.parse("geo:$lat,$lng")
-            val intent = Intent(Intent.ACTION_VIEW, uri)
-            startActivity(intent)
+        } catch (e1: Exception) {
+            try {
+                val uri = Uri.parse("baidumap://map/direction?destination=latlng:$lat,$lng|name:$addressLabel&mode=driving")
+                val intent = Intent(Intent.ACTION_VIEW, uri)
+                startActivity(intent)
+            } catch (e2: Exception) {
+                try {
+                    val uri = Uri.parse("geo:$lat,$lng?q=$lat,$lng($addressLabel)")
+                    val intent = Intent(Intent.ACTION_VIEW, uri)
+                    startActivity(intent)
+                } catch (e3: Exception) {
+                    Toast.makeText(this, "未安装地图应用，坐标已复制到剪贴板", Toast.LENGTH_LONG).show()
+                    val clipboard = getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                    val clip = android.content.ClipData.newPlainText("坐标", "$lat, $lng")
+                    clipboard.setPrimaryClip(clip)
+                }
+            }
         }
     }
 
