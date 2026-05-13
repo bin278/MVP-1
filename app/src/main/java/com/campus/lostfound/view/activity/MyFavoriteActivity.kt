@@ -13,13 +13,13 @@ import com.campus.lostfound.R
 import com.campus.lostfound.db.FavoriteDao
 import com.campus.lostfound.model.Item
 import com.campus.lostfound.sharedpref.UserManager
-import com.campus.lostfound.view.adapter.ItemAdapter
+import com.campus.lostfound.view.adapter.PostAdapter
 
 class MyFavoriteActivity : BaseActivity() {
 
     private lateinit var favoriteDao: FavoriteDao
     private lateinit var userManager: UserManager
-    private lateinit var adapter: ItemAdapter
+    private lateinit var adapter: PostAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,24 +33,11 @@ class MyFavoriteActivity : BaseActivity() {
         val swipeRefresh = findViewById<SwipeRefreshLayout>(R.id.swipeRefresh)
         val tvEmpty = findViewById<TextView>(R.id.tvEmpty)
 
-        adapter = ItemAdapter { item ->
+        adapter = PostAdapter({ item ->
             val intent = Intent(this, DetailActivity::class.java)
             intent.putExtra("item_id", item.id)
             startActivity(intent)
-        }
-
-        adapter.setOnItemLongClickListener { item ->
-            AlertDialog.Builder(this)
-                .setTitle("取消收藏")
-                .setMessage("确认取消收藏「${item.name}」？")
-                .setPositiveButton(getString(R.string.confirm)) { _, _ ->
-                    favoriteDao.removeFavorite(userManager.getCurrentUser(), item.id)
-                    Toast.makeText(this, "已取消收藏", Toast.LENGTH_SHORT).show()
-                    loadData()
-                }
-                .setNegativeButton(getString(R.string.cancel), null)
-                .show()
-        }
+        }, userManager)
 
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter

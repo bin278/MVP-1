@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="primary">#FF4CAF50</color>
-    <color name="primary_dark">#FF388E3C</color>
-    <color name="primary_light">#FFE8F5E9</color>
-    <color name="primary_gradient_start">#FF66BB6A</color>
-    <color name="primary_gradient_end">#FF43A047</color>
-    <color name="accent">#FF81C784</color>
-    <color name="accent_light">#FFC8E6C9</color>
+    <color name="primary">#FF2196F3</color>
+    <color name="primary_dark">#FF1976D2</color>
+    <color name="primary_light">#FFE3F2FD</color>
+    <color name="primary_gradient_start">#FF42A5F5</color>
+    <color name="primary_gradient_end">#FF1E88E5</color>
+    <color name="accent">#FF64B5F6</color>
+    <color name="accent_light">#FFBBDEFB</color>
     <color name="white">#FFFFFFFF</color>
     <color name="black">#FF212121</color>
-    <color name="gray_bg">#FFF1F8E9</color>
+    <color name="gray_bg">#FFF5F7FA</color>
     <color name="gray_light">#FFEEEEEE</color>
     <color name="gray">#FF9E9E9E</color>
     <color name="gray_dark">#FF616161</color>
@@ -18,8 +18,8 @@
     <color name="green">#FF43A047</color>
     <color name="green_light">#FFE8F5E9</color>
     <color name="lost_tag">#FFEF5350</color>
-    <color name="found_tag">#FF66BB6A</color>
-    <color name="contact_bg">#FFE8F5E9</color>
+    <color name="found_tag">#FF42A5F5</color>
+    <color name="contact_bg">#FFE3F2FD</color>
     <color name="card_white">#FFFFFFFF</color>
     <color name="divider">#FFE0E0E0</color>
     <color name="text_primary">#FF212121</color>
@@ -27,4 +27,8 @@
     <color name="text_hint">#FFBDBDBD</color>
     <color name="shadow_color">#1A000000</color>
     <color name="overlay_dark">#33000000</color>
+    <color name="banner_bg">#FFE3F2FD</color>
+    <color name="campus_tag_bg">#FFE3F2FD</color>
+    <color name="campus_tag_text">#FF1976D2</color>
+    <color name="views_text">#FF9E9E9E</color>
 </resources>

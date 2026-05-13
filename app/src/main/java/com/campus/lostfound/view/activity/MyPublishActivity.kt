@@ -13,13 +13,13 @@ import com.campus.lostfound.R
 import com.campus.lostfound.db.ItemDao
 import com.campus.lostfound.model.Item
 import com.campus.lostfound.sharedpref.UserManager
-import com.campus.lostfound.view.adapter.ItemAdapter
+import com.campus.lostfound.view.adapter.PostAdapter
 
 class MyPublishActivity : BaseActivity() {
 
     private lateinit var itemDao: ItemDao
     private lateinit var userManager: UserManager
-    private lateinit var adapter: ItemAdapter
+    private lateinit var adapter: PostAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,15 +33,11 @@ class MyPublishActivity : BaseActivity() {
         val swipeRefresh = findViewById<SwipeRefreshLayout>(R.id.swipeRefresh)
         val tvEmpty = findViewById<TextView>(R.id.tvEmpty)
 
-        adapter = ItemAdapter { item ->
+        adapter = PostAdapter({ item ->
             val intent = Intent(this, DetailActivity::class.java)
             intent.putExtra("item_id", item.id)
             startActivity(intent)
-        }
-
-        adapter.setOnItemLongClickListener { item ->
-            showOptionsDialog(item)
-        }
+        }, userManager)
 
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
@@ -62,34 +58,6 @@ class MyPublishActivity : BaseActivity() {
         tvEmpty.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
         recyclerView.visibility = if (items.isEmpty()) View.GONE else View.VISIBLE
         swipeRefresh.isRefreshing = false
-    }
-
-    private fun showOptionsDialog(item: Item) {
-        val options = arrayOf("编辑", "删除")
-        AlertDialog.Builder(this)
-            .setTitle(item.name)
-            .setItems(options) { _, which ->
-                when (which) {
-                    0 -> {
-                        val intent = Intent(this, PublishActivity::class.java)
-                        intent.putExtra("item_id", item.id)
-                        startActivity(intent)
-                    }
-                    1 -> {
-                        AlertDialog.Builder(this)
-                            .setTitle(getString(R.string.confirm_delete))
-                            .setMessage(getString(R.string.delete_msg))
-                            .setPositiveButton(getString(R.string.confirm)) { _, _ ->
-                                itemDao.delete(item.id)
-                                Toast.makeText(this, "已删除", Toast.LENGTH_SHORT).show()
-                                loadData()
-                            }
-                            .setNegativeButton(getString(R.string.cancel), null)
-                            .show()
-                    }
-                }
-            }
-            .show()
     }
 
     override fun onResume() {
