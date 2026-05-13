@@ -13,11 +13,6 @@
         android:gravity="center"
         android:padding="32dp">
 
-        <View
-            android:layout_width="80dp"
-            android:layout_height="80dp"
-            android:background="@drawable/bg_app_icon" />
-
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -34,7 +29,49 @@
             android:text="创建新账号"
             android:textSize="14sp"
             android:textColor="@color/text_secondary"
-            android:layout_marginBottom="24dp" />
+            android:layout_marginBottom="16dp" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardAvatar"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:layout_marginBottom="20dp"
+            app:cardCornerRadius="40dp"
+            app:cardElevation="1dp"
+            app:cardBackgroundColor="@color/primary_light"
+            app:strokeWidth="0dp">
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <ImageView
+                    android:id="@+id/ivAvatar"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="centerCrop"
+                    android:contentDescription="@string/avatar" />
+
+                <ImageView
+                    android:id="@+id/ivCameraIcon"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:layout_gravity="bottom|end"
+                    android:src="@android:drawable/ic_menu_camera"
+                    android:background="@drawable/bg_avatar_circle"
+                    android:padding="4dp"
+                    android:contentDescription="camera" />
+            </FrameLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <TextView
+            android:id="@+id/tvChangeAvatar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/select_avatar"
+            android:textSize="13sp"
+            android:textColor="@color/primary"
+            android:layout_marginBottom="20dp" />
 
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"

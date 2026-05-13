@@ -32,10 +32,11 @@
                     android:padding="28dp"
                     android:gravity="center">
 
-                    <View
-                        android:layout_width="72dp"
-                        android:layout_height="72dp"
-                        android:background="@drawable/bg_avatar_circle" />
+                    <ImageView
+                        android:id="@+id/ivProfileAvatar"
+                        android:layout_width="80dp"
+                        android:layout_height="80dp"
+                        android:contentDescription="@string/avatar" />
 
                     <TextView
                         android:id="@+id/tvUsername"

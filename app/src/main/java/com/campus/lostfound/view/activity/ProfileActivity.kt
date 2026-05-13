@@ -3,10 +3,13 @@ package com.campus.lostfound.view.activity
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
+import android.widget.ImageView
 import android.widget.TextView
+import com.bumptech.glide.Glide
 import com.campus.lostfound.R
 import com.campus.lostfound.sharedpref.UserManager
 import com.google.android.material.button.MaterialButton
+import java.io.File
 
 class ProfileActivity : BaseActivity() {
 
@@ -18,6 +21,7 @@ class ProfileActivity : BaseActivity() {
 
         userManager = UserManager(this)
 
+        val ivAvatar = findViewById<ImageView>(R.id.ivProfileAvatar)
         val tvUsername = findViewById<TextView>(R.id.tvUsername)
         val tvStudentInfo = findViewById<TextView>(R.id.tvStudentInfo)
         val tvMyPublish = findViewById<View>(R.id.tvMyPublish)
@@ -26,6 +30,17 @@ class ProfileActivity : BaseActivity() {
 
         val userInfo = userManager.getUserInfo()
         tvUsername.text = userInfo.nickname.ifEmpty { userInfo.username }
+
+        if (userInfo.avatarPath.isNotEmpty()) {
+            val avatarFile = File(userInfo.avatarPath)
+            if (avatarFile.exists()) {
+                Glide.with(this)
+                    .load(avatarFile)
+                    .circleCrop()
+                    .placeholder(android.R.drawable.ic_menu_camera)
+                    .into(ivAvatar)
+            }
+        }
 
         val infoParts = mutableListOf<String>()
         if (userInfo.studentId.isNotEmpty()) infoParts.add("学号: ${userInfo.studentId}")

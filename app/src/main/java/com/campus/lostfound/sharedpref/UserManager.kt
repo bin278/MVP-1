@@ -14,10 +14,11 @@ class UserManager(context: Context) {
         val username: String,
         val nickname: String = "",
         val studentId: String = "",
-        val campus: String = ""
+        val campus: String = "",
+        val avatarPath: String = ""
     )
 
-    fun register(username: String, password: String, nickname: String = "", studentId: String = "", campus: String = ""): Boolean {
+    fun register(username: String, password: String, nickname: String = "", studentId: String = "", campus: String = "", avatarPath: String = ""): Boolean {
         val key = "user_$username"
         if (prefs.contains(key)) {
             return false
@@ -27,6 +28,7 @@ class UserManager(context: Context) {
             .putString("${key}_nickname", nickname)
             .putString("${key}_student_id", studentId)
             .putString("${key}_campus", campus)
+            .putString("${key}_avatar", avatarPath)
             .apply()
         return true
     }
@@ -57,7 +59,8 @@ class UserManager(context: Context) {
             username = user,
             nickname = prefs.getString("${key}_nickname", "") ?: "",
             studentId = prefs.getString("${key}_student_id", "") ?: "",
-            campus = prefs.getString("${key}_campus", "") ?: ""
+            campus = prefs.getString("${key}_campus", "") ?: "",
+            avatarPath = prefs.getString("${key}_avatar", "") ?: ""
         )
     }
 
@@ -71,6 +74,10 @@ class UserManager(context: Context) {
 
     fun getCurrentCampus(): String {
         return getUserInfo().campus
+    }
+
+    fun getCurrentAvatarPath(): String {
+        return getUserInfo().avatarPath
     }
 
     fun logout() {

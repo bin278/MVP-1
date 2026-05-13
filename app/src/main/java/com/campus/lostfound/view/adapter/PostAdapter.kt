@@ -1,8 +1,8 @@
 package com.campus.lostfound.view.adapter
 
-import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
@@ -31,7 +31,7 @@ class PostAdapter(
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-        val view = LayoutInflater.from(parent.context)
+        val view = android.view.LayoutInflater.from(parent.context)
             .inflate(R.layout.item_post, parent, false)
         return ViewHolder(view)
     }
@@ -43,6 +43,7 @@ class PostAdapter(
     override fun getItemCount() = items.size
 
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        private val ivAvatar: ImageView = view.findViewById(R.id.ivAvatar)
         private val tvAvatar: TextView = view.findViewById(R.id.tvAvatar)
         private val tvNickname: TextView = view.findViewById(R.id.tvNickname)
         private val tvCampusTag: TextView = view.findViewById(R.id.tvCampusTag)
@@ -59,7 +60,26 @@ class PostAdapter(
             val nickname = publisherInfo.nickname.ifEmpty { item.publisher }
             val campus = publisherInfo.campus.ifEmpty { "校园" }
 
-            tvAvatar.text = nickname.take(1)
+            if (publisherInfo.avatarPath.isNotEmpty()) {
+                val avatarFile = File(publisherInfo.avatarPath)
+                if (avatarFile.exists()) {
+                    ivAvatar.visibility = View.VISIBLE
+                    tvAvatar.visibility = View.GONE
+                    Glide.with(itemView.context)
+                        .load(avatarFile)
+                        .circleCrop()
+                        .into(ivAvatar)
+                } else {
+                    ivAvatar.visibility = View.GONE
+                    tvAvatar.visibility = View.VISIBLE
+                    tvAvatar.text = nickname.take(1)
+                }
+            } else {
+                ivAvatar.visibility = View.GONE
+                tvAvatar.visibility = View.VISIBLE
+                tvAvatar.text = nickname.take(1)
+            }
+
             tvNickname.text = nickname
             tvCampusTag.text = campus
             tvPublishTime.text = item.publishTime
@@ -95,7 +115,6 @@ class PostAdapter(
 
             val viewCount = (item.id % 37 + 10).toInt()
             tvViews.text = itemView.context.getString(R.string.views_count, viewCount)
-
             btnStatus.text = itemView.context.getString(R.string.not_claimed)
 
             itemView.setOnClickListener { onItemClick(item) }

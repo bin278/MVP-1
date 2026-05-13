@@ -63,4 +63,6 @@
     <string name="not_claimed">未认领</string>
     <string name="claimed">已认领</string>
     <string name="views_count">%d 次浏览</string>
+    <string name="avatar">设置头像</string>
+    <string name="select_avatar">选择头像</string>
 </resources>
