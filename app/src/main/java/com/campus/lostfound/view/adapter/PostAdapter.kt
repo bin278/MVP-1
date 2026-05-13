@@ -3,7 +3,6 @@ package com.campus.lostfound.view.adapter
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
@@ -14,6 +13,8 @@ import com.campus.lostfound.R
 import com.campus.lostfound.constant.Constants
 import com.campus.lostfound.model.Item
 import com.campus.lostfound.sharedpref.UserManager
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.imageview.ShapeableImageView
 import java.io.File
 
 class PostAdapter(
@@ -48,10 +49,10 @@ class PostAdapter(
         private val tvPublishTime: TextView = view.findViewById(R.id.tvPublishTime)
         private val tvDescription: TextView = view.findViewById(R.id.tvDescription)
         private val layoutImages: LinearLayout = view.findViewById(R.id.layoutImages)
-        private val ivImage1: ImageView = view.findViewById(R.id.ivImage1)
-        private val ivImage2: ImageView = view.findViewById(R.id.ivImage2)
+        private val ivImage1: ShapeableImageView = view.findViewById(R.id.ivImage1)
+        private val ivImage2: ShapeableImageView = view.findViewById(R.id.ivImage2)
         private val tvViews: TextView = view.findViewById(R.id.tvViews)
-        private val tvStatus: TextView = view.findViewById(R.id.tvStatus)
+        private val btnStatus: MaterialButton = view.findViewById(R.id.tvStatus)
 
         fun bind(item: Item) {
             val publisherInfo = userManager.getUserInfo(item.publisher)
@@ -71,7 +72,9 @@ class PostAdapter(
                 layoutImages.visibility = View.GONE
             } else {
                 layoutImages.visibility = View.VISIBLE
-                val requestOptions = RequestOptions().transform(RoundedCorners(8))
+                val requestOptions = RequestOptions()
+                    .transform(RoundedCorners(12))
+                    .centerCrop()
                 Glide.with(itemView.context)
                     .load(imageFiles[0])
                     .apply(requestOptions)
@@ -93,7 +96,7 @@ class PostAdapter(
             val viewCount = (item.id % 37 + 10).toInt()
             tvViews.text = itemView.context.getString(R.string.views_count, viewCount)
 
-            tvStatus.text = itemView.context.getString(R.string.not_claimed)
+            btnStatus.text = itemView.context.getString(R.string.not_claimed)
 
             itemView.setOnClickListener { onItemClick(item) }
         }
@@ -104,7 +107,9 @@ class PostAdapter(
             val mainFile = File(imagePath)
             if (mainFile.exists()) files.add(mainFile)
             val parent = mainFile.parentFile ?: return files
-            val siblings = parent.listFiles { f -> f.name.startsWith(mainFile.nameWithoutExtension) && f != mainFile }
+            val siblings = parent.listFiles { f ->
+                f.name.startsWith(mainFile.nameWithoutExtension) && f != mainFile
+            }
             siblings?.take(1)?.let { files.addAll(it) }
             return files
         }

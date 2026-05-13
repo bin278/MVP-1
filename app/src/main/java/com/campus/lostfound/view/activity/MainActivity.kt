@@ -203,10 +203,15 @@ class MainActivity : BaseActivity() {
     private fun setupCategoryTabs() {
         layoutCategoryTabs.removeAllViews()
         for ((index, category) in categories.withIndex()) {
+            val wrapper = android.widget.LinearLayout(this).apply {
+                orientation = android.widget.LinearLayout.VERTICAL
+                setPadding(16, 0, 16, 0)
+            }
+
             val tv = TextView(this).apply {
                 text = category
                 textSize = 14f
-                setPadding(20, 12, 20, 12)
+                setPadding(4, 10, 4, 8)
                 if (index == selectedTabIndex) {
                     setTextColor(getColor(R.color.primary))
                     paintFlags = paintFlags or android.graphics.Paint.FAKE_BOLD_TEXT_FLAG
@@ -214,14 +219,29 @@ class MainActivity : BaseActivity() {
                     setTextColor(getColor(R.color.text_secondary))
                     paintFlags = paintFlags and android.graphics.Paint.FAKE_BOLD_TEXT_FLAG.inv()
                 }
-                setOnClickListener {
-                    selectedTabIndex = index
-                    selectedCategory = if (index == 0) null else categoryMap[category]
-                    setupCategoryTabs()
-                    loadData()
+            }
+
+            val underline = View(this).apply {
+                layoutParams = android.widget.LinearLayout.LayoutParams(
+                    android.widget.LinearLayout.LayoutParams.MATCH_PARENT, 3
+                )
+                if (index == selectedTabIndex) {
+                    setBackgroundColor(getColor(R.color.primary))
+                } else {
+                    setBackgroundColor(android.graphics.Color.TRANSPARENT)
                 }
             }
-            layoutCategoryTabs.addView(tv)
+
+            wrapper.addView(tv)
+            wrapper.addView(underline)
+
+            wrapper.setOnClickListener {
+                selectedTabIndex = index
+                selectedCategory = if (index == 0) null else categoryMap[category]
+                setupCategoryTabs()
+                loadData()
+            }
+            layoutCategoryTabs.addView(wrapper)
         }
     }
 

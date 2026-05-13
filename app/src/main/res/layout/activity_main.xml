@@ -7,6 +7,7 @@
     android:fitsSystemWindows="true">
 
     <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/appBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@color/white"
@@ -14,56 +15,21 @@
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="56dp"
+            android:layout_height="52dp"
             android:orientation="horizontal"
             android:gravity="center_vertical"
             android:paddingStart="12dp"
             android:paddingEnd="12dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
             android:background="@color/white">
 
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="0dp"
-                android:layout_height="36dp"
+                android:layout_height="38dp"
                 android:layout_weight="3"
                 android:layout_marginEnd="8dp"
-                app:cardCornerRadius="18dp"
-                app:cardElevation="0dp"
-                app:cardBackgroundColor="@color/primary_light"
-                app:strokeWidth="0dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:paddingStart="12dp"
-                    android:paddingEnd="8dp">
-
-                    <TextView
-                        android:id="@+id/tvSelectedCampus"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="大学城校区"
-                        android:textSize="13sp"
-                        android:textColor="@color/primary"
-                        android:maxLines="1"
-                        android:ellipsize="end" />
-
-                    <ImageView
-                        android:layout_width="16dp"
-                        android:layout_height="16dp"
-                        android:src="@android:drawable/arrow_down_float"
-                        android:alpha="0.6"
-                        android:contentDescription="dropdown" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="0dp"
-                android:layout_height="36dp"
-                android:layout_weight="7"
-                app:cardCornerRadius="18dp"
+                app:cardCornerRadius="19dp"
                 app:cardElevation="0dp"
                 app:cardBackgroundColor="@color/gray_bg"
                 app:strokeWidth="0dp">
@@ -74,7 +40,44 @@
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
                     android:paddingStart="14dp"
-                    android:paddingEnd="10dp">
+                    android:paddingEnd="8dp">
+
+                    <TextView
+                        android:id="@+id/tvSelectedCampus"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="大学城校区"
+                        android:textSize="13sp"
+                        android:textColor="@color/text_primary"
+                        android:maxLines="1"
+                        android:ellipsize="end" />
+
+                    <ImageView
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:src="@android:drawable/arrow_down_float"
+                        android:alpha="0.5"
+                        android:contentDescription="dropdown" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="0dp"
+                android:layout_height="38dp"
+                android:layout_weight="7"
+                app:cardCornerRadius="19dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="@color/gray_bg"
+                app:strokeWidth="0dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingStart="14dp"
+                    android:paddingEnd="12dp">
 
                     <ImageView
                         android:layout_width="18dp"
@@ -105,7 +108,7 @@
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_marginBottom="64dp"
+        android:layout_marginBottom="60dp"
         android:fillViewport="true"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
@@ -130,24 +133,22 @@
                     android:layout_height="wrap_content"
                     android:layout_gravity="bottom|center_horizontal"
                     android:orientation="horizontal"
-                    android:layout_marginBottom="12dp"
+                    android:layout_marginBottom="14dp"
                     android:gravity="center" />
             </FrameLayout>
 
             <HorizontalScrollView
                 android:layout_width="match_parent"
-                android:layout_height="48dp"
+                android:layout_height="wrap_content"
                 android:background="@color/white"
-                android:scrollbars="none"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp">
+                android:scrollbars="none">
 
                 <LinearLayout
                     android:id="@+id/layoutCategoryTabs"
                     android:layout_width="wrap_content"
                     android:layout_height="match_parent"
                     android:orientation="horizontal"
-                    android:gravity="center_vertical" />
+                    android:minHeight="46dp" />
             </HorizontalScrollView>
 
             <View
@@ -162,7 +163,7 @@
                 android:nestedScrollingEnabled="false"
                 android:clipToPadding="false"
                 android:paddingTop="8dp"
-                android:paddingBottom="8dp" />
+                android:paddingBottom="16dp" />
 
             <TextView
                 android:id="@+id/tvEmpty"
@@ -174,21 +175,22 @@
                 android:textColor="@color/text_hint"
                 android:visibility="gone" />
 
-            <com.google.android.material.floatingactionbutton.FloatingActionButton
-                android:id="@+id/fabPublish"
-                android:layout_width="56dp"
-                android:layout_height="56dp"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginTop="16dp"
-                android:layout_marginBottom="24dp"
-                android:src="@android:drawable/ic_input_add"
-                app:backgroundTint="@color/primary"
-                app:tint="@color/white"
-                app:elevation="6dp"
-                app:rippleColor="@color/primary_dark" />
-
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fabPublish"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="30dp"
+        android:src="@android:drawable/ic_input_add"
+        android:contentDescription="@string/publish"
+        app:backgroundTint="@color/primary"
+        app:tint="@color/white"
+        app:elevation="8dp"
+        app:rippleColor="@color/primary_dark"
+        app:borderWidth="0dp" />
 
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/bottomNav"
