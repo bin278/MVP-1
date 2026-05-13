@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.CampusLostFound" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="colorPrimary">#FF4CAF50</item>
-        <item name="colorPrimaryDark">#FF2E7D32</item>
-        <item name="colorAccent">#FF81C784</item>
-        <item name="android:statusBarColor">#FF2E7D32</item>
+        <item name="colorPrimary">#FF388E3C</item>
+        <item name="colorPrimaryDark">#FF1B5E20</item>
+        <item name="colorAccent">#FF66BB6A</item>
+        <item name="android:statusBarColor">#FF1B5E20</item>
     </style>
 </resources>
