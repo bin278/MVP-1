@@ -37,6 +37,8 @@
         <activity android:name=".view.activity.PublishActivity" />
         <activity android:name=".view.activity.DetailActivity" />
         <activity android:name=".view.activity.MapPointActivity" />
+        <activity android:name=".view.activity.MyPublishActivity" />
+        <activity android:name=".view.activity.MyFavoriteActivity" />
 
         <provider
             android:name="androidx.core.content.FileProvider"
