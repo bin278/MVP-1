@@ -12,6 +12,9 @@ object Constants {
     const val PREF_NAME = "campus_lost_found"    // SharedPreferences名称
     const val KEY_LOGIN_STATUS = "login_status"  // 登录状态键
     const val KEY_CURRENT_USER = "current_user"  // 当前用户键
+    const val KEY_NICKNAME = "nickname"          // 昵称键
+    const val KEY_STUDENT_ID = "student_id"      // 学号键
+    const val KEY_CAMPUS = "campus"              // 校区键
 
     // 物品类型
     const val ITEM_TYPE_LOST = "lost"            // 丢失物品
@@ -27,5 +30,10 @@ object Constants {
     val CATEGORIES = arrayOf(
         "电子产品", "证件卡片", "钥匙钱包", "书籍文具",
         "衣物配饰", "生活用品", "运动器材", "其他"
+    )
+
+    // 校区列表
+    val CAMPUSES = arrayOf(
+        "大学城校区", "石牌校区", "南海校区", "汕尾校区"
     )
 }

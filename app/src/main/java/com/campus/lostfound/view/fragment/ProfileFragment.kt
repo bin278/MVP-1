@@ -31,11 +31,22 @@ class ProfileFragment : Fragment() {
         userManager = UserManager(requireContext())
 
         val tvUsername = view.findViewById<TextView>(R.id.tvUsername)
+        val tvStudentInfo = view.findViewById<TextView>(R.id.tvStudentInfo)
         val tvMyPublish = view.findViewById<View>(R.id.tvMyPublish)
         val tvMyFavorite = view.findViewById<View>(R.id.tvMyFavorite)
         val btnLogout = view.findViewById<MaterialButton>(R.id.btnLogout)
 
-        tvUsername.text = userManager.getCurrentUser()
+        val userInfo = userManager.getUserInfo()
+        tvUsername.text = userInfo.nickname.ifEmpty { userInfo.username }
+
+        val infoParts = mutableListOf<String>()
+        if (userInfo.studentId.isNotEmpty()) {
+            infoParts.add("学号: ${userInfo.studentId}")
+        }
+        if (userInfo.campus.isNotEmpty()) {
+            infoParts.add("校区: ${userInfo.campus}")
+        }
+        tvStudentInfo.text = infoParts.joinToString(" | ")
 
         tvMyPublish.setOnClickListener {
             startActivity(Intent(requireContext(), MyPublishActivity::class.java))

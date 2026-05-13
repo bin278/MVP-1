@@ -9,6 +9,10 @@
     <string name="username">用户名</string>
     <string name="password">密码</string>
     <string name="confirm_password">确认密码</string>
+    <string name="nickname">昵称</string>
+    <string name="student_id">学号</string>
+    <string name="campus">校区</string>
+    <string name="select_campus">请选择校区</string>
     <string name="no_account">没有账号？去注册</string>
     <string name="has_account">已有账号？去登录</string>
     <string name="logout">退出登录</string>

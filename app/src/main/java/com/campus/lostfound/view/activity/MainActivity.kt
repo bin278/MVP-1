@@ -46,7 +46,7 @@ class MainActivity : BaseActivity() {
 
         // 创建测试用户
         if (!userManager.isLoggedIn()) {
-            userManager.register("测试用户", "123456")
+            userManager.register("测试用户", "123456", "测试昵称", "20240001", "大学城校区")
             userManager.login("测试用户", "123456")
         }
 
