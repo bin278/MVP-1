@@ -66,7 +66,9 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         app:singleSelection="true"
-                        app:chipSpacingHorizontal="12dp">
+                        app:chipSpacingHorizontal="12dp"
+                        app:selectionRequired="true"
+                        app:checkedChip="@id/chipLost">
 
                         <com.google.android.material.chip.Chip
                             android:id="@+id/chipLost"
@@ -77,7 +79,7 @@
                             android:text="🔍 失物"
                             android:textColor="@color/white"
                             android:textAlignment="center"
-                            app:chipBackgroundColor="@color/lost_tag"
+                            app:chipBackgroundColor="@color/selector_chip_lost"
                             app:checkedIconEnabled="false" />
 
                         <com.google.android.material.chip.Chip
@@ -89,7 +91,7 @@
                             android:text="📦 招领"
                             android:textColor="@color/white"
                             android:textAlignment="center"
-                            app:chipBackgroundColor="@color/found_tag"
+                            app:chipBackgroundColor="@color/selector_chip_found"
                             app:checkedIconEnabled="false" />
                     </com.google.android.material.chip.ChipGroup>
                 </LinearLayout>
