@@ -165,7 +165,25 @@ class PublishActivity : BaseActivity() {
         layoutImageList = findViewById(R.id.layoutImageList)
         btnSubmit = findViewById(R.id.btnSubmit)
 
+        // 默认选中"失物"
         chipLost.isChecked = true
+        chipLost.chipBackgroundColor = android.content.res.ColorStateList.valueOf(getColor(R.color.lost_tag))
+        chipFound.chipBackgroundColor = android.content.res.ColorStateList.valueOf(
+            android.graphics.Color.argb(102, 66, 165, 245))
+
+        // Chip 点击切换
+        chipLost.setOnClickListener {
+            chipLost.isChecked = true; chipFound.isChecked = false
+            chipLost.chipBackgroundColor = android.content.res.ColorStateList.valueOf(getColor(R.color.lost_tag))
+            chipFound.chipBackgroundColor = android.content.res.ColorStateList.valueOf(
+                android.graphics.Color.argb(102, 66, 165, 245))
+        }
+        chipFound.setOnClickListener {
+            chipFound.isChecked = true; chipLost.isChecked = false
+            chipFound.chipBackgroundColor = android.content.res.ColorStateList.valueOf(getColor(R.color.found_tag))
+            chipLost.chipBackgroundColor = android.content.res.ColorStateList.valueOf(
+                android.graphics.Color.argb(102, 239, 83, 80))
+        }
     }
 
     private fun setupCategoryDropdown() {

@@ -65,33 +65,30 @@
                         android:id="@+id/chipGroupType"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        app:singleSelection="true"
-                        app:chipSpacingHorizontal="12dp"
-                        app:selectionRequired="true"
-                        app:checkedChip="@id/chipLost">
+                        app:chipSpacingHorizontal="12dp">
 
                         <com.google.android.material.chip.Chip
                             android:id="@+id/chipLost"
-                            style="@style/Widget.MaterialComponents.Chip.Choice"
                             android:layout_width="0dp"
-                            android:layout_height="38dp"
+                            android:layout_height="42dp"
                             android:layout_weight="1"
+                            android:checkable="true"
                             android:text="🔍 失物"
                             android:textColor="@color/white"
                             android:textAlignment="center"
-                            app:chipBackgroundColor="@color/selector_chip_lost"
+                            app:chipBackgroundColor="@color/lost_tag"
                             app:checkedIconEnabled="false" />
 
                         <com.google.android.material.chip.Chip
                             android:id="@+id/chipFound"
-                            style="@style/Widget.MaterialComponents.Chip.Choice"
                             android:layout_width="0dp"
-                            android:layout_height="38dp"
+                            android:layout_height="42dp"
                             android:layout_weight="1"
+                            android:checkable="true"
                             android:text="📦 招领"
                             android:textColor="@color/white"
                             android:textAlignment="center"
-                            app:chipBackgroundColor="@color/selector_chip_found"
+                            app:chipBackgroundColor="@color/found_tag"
                             app:checkedIconEnabled="false" />
                     </com.google.android.material.chip.ChipGroup>
                 </LinearLayout>
