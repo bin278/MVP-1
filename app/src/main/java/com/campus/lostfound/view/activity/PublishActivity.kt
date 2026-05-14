@@ -35,8 +35,6 @@ import com.campus.lostfound.model.Item
 import com.campus.lostfound.sharedpref.UserManager
 import com.campus.lostfound.util.TimeUtil
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.chip.Chip
-import com.google.android.material.chip.ChipGroup
 import com.google.android.material.imageview.ShapeableImageView
 import com.google.android.material.textfield.TextInputEditText
 import java.io.File
@@ -62,9 +60,10 @@ class PublishActivity : BaseActivity() {
     private lateinit var aiHelper: AiHelper
     private lateinit var locationManager: LocationManager
 
-    private lateinit var chipGroupType: ChipGroup
-    private lateinit var chipLost: Chip
-    private lateinit var chipFound: Chip
+    private lateinit var chipGroupType: LinearLayout
+    private lateinit var chipLost: com.google.android.material.button.MaterialButton
+    private lateinit var chipFound: com.google.android.material.button.MaterialButton
+    private var currentItemType = Constants.ITEM_TYPE_LOST
     private lateinit var etName: TextInputEditText
     private lateinit var actvCategory: AutoCompleteTextView
     private lateinit var etLocation: TextInputEditText
@@ -165,24 +164,32 @@ class PublishActivity : BaseActivity() {
         layoutImageList = findViewById(R.id.layoutImageList)
         btnSubmit = findViewById(R.id.btnSubmit)
 
-        // 默认选中"失物"
-        chipLost.isChecked = true
-        chipLost.chipBackgroundColor = android.content.res.ColorStateList.valueOf(getColor(R.color.lost_tag))
-        chipFound.chipBackgroundColor = android.content.res.ColorStateList.valueOf(
-            android.graphics.Color.argb(102, 66, 165, 245))
-
-        // Chip 点击切换
+        updateTypeButtonStyles()
         chipLost.setOnClickListener {
-            chipLost.isChecked = true; chipFound.isChecked = false
-            chipLost.chipBackgroundColor = android.content.res.ColorStateList.valueOf(getColor(R.color.lost_tag))
-            chipFound.chipBackgroundColor = android.content.res.ColorStateList.valueOf(
-                android.graphics.Color.argb(102, 66, 165, 245))
+            currentItemType = Constants.ITEM_TYPE_LOST
+            updateTypeButtonStyles()
         }
         chipFound.setOnClickListener {
-            chipFound.isChecked = true; chipLost.isChecked = false
-            chipFound.chipBackgroundColor = android.content.res.ColorStateList.valueOf(getColor(R.color.found_tag))
-            chipLost.chipBackgroundColor = android.content.res.ColorStateList.valueOf(
-                android.graphics.Color.argb(102, 239, 83, 80))
+            currentItemType = Constants.ITEM_TYPE_FOUND
+            updateTypeButtonStyles()
+        }
+    }
+
+    private fun updateTypeButtonStyles() {
+        val selectedColor = ContextCompat.getColor(this, R.color.white)
+        val lostColor = ContextCompat.getColor(this, R.color.lost_tag)
+        val foundColor = ContextCompat.getColor(this, R.color.found_tag)
+
+        if (currentItemType == Constants.ITEM_TYPE_LOST) {
+            chipLost.setBackgroundColor(lostColor)
+            chipLost.setTextColor(selectedColor)
+            chipFound.setBackgroundColor(ContextCompat.getColor(this, R.color.gray_bg))
+            chipFound.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
+        } else {
+            chipFound.setBackgroundColor(foundColor)
+            chipFound.setTextColor(selectedColor)
+            chipLost.setBackgroundColor(ContextCompat.getColor(this, R.color.gray_bg))
+            chipLost.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
         }
     }
 
@@ -226,7 +233,8 @@ class PublishActivity : BaseActivity() {
             etTime.setText(item.time)
             etContact.setText(item.contact)
             etDescription.setText(item.description)
-            if (item.type == Constants.ITEM_TYPE_LOST) chipLost.isChecked = true else chipFound.isChecked = true
+            currentItemType = item.type
+            updateTypeButtonStyles()
             selectedLatitude = item.latitude
             selectedLongitude = item.longitude
             selectedAddressText = item.addressText
@@ -370,7 +378,7 @@ class PublishActivity : BaseActivity() {
     }
 
     private fun submitItem() {
-        val type = if (chipLost.isChecked) Constants.ITEM_TYPE_LOST else Constants.ITEM_TYPE_FOUND
+        val type = currentItemType
         val name = etName.text.toString().trim()
         val category = actvCategory.text.toString().trim()
         val location = etLocation.text.toString().trim()
