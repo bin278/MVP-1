@@ -10,13 +10,19 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <ImageView
-            android:id="@+id/ivDetailImage"
+        <androidx.viewpager2.widget.ViewPager2
+            android:id="@+id/vpDetailImages"
             android:layout_width="match_parent"
-            android:layout_height="260dp"
-            android:scaleType="centerCrop"
-            android:src="@android:drawable/ic_menu_gallery"
-            android:contentDescription="物品图片" />
+            android:layout_height="260dp" />
+
+        <LinearLayout
+            android:id="@+id/layoutImageDots"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#44000000"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:padding="6dp" />
 
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"

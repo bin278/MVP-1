@@ -34,6 +34,6 @@ object Constants {
 
     // 校区列表
     val CAMPUSES = arrayOf(
-        "大学城校区", "石牌校区", "南海校区", "汕尾校区"
+        "文昌校区", "柳东校区", "柳石校区"
     )
 }

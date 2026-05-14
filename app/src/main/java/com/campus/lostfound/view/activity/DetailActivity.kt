@@ -5,9 +5,12 @@ import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
+import android.view.ViewGroup
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.campus.lostfound.R
@@ -67,7 +70,8 @@ class DetailActivity : BaseActivity() {
      * @param item 物品数据对象
      */
     private fun displayItem(item: Item) {
-        val ivImage = findViewById<ImageView>(R.id.ivDetailImage)
+        val vpImages = findViewById<androidx.viewpager2.widget.ViewPager2>(R.id.vpDetailImages)
+        val layoutDots = findViewById<LinearLayout>(R.id.layoutImageDots)
         val tvType = findViewById<TextView>(R.id.tvDetailType)
         val tvName = findViewById<TextView>(R.id.tvDetailName)
         val tvCategory = findViewById<TextView>(R.id.tvDetailCategory)
@@ -113,12 +117,37 @@ class DetailActivity : BaseActivity() {
             tvType.background = bg
         }
 
-        // 加载物品图片
-        if (item.imagePath.isNotEmpty()) {
-            val file = File(item.imagePath)
-            if (file.exists()) {
-                Glide.with(this).load(file).centerCrop().into(ivImage)
+        // 加载多张物品图片
+        val imageFiles = if (item.imagePath.isNotEmpty()) {
+            item.imagePath.split("|||").map { File(it) }.filter { it.exists() }
+        } else emptyList()
+
+        if (imageFiles.isNotEmpty()) {
+            vpImages.visibility = View.VISIBLE
+            layoutDots.visibility = View.VISIBLE
+            vpImages.adapter = DetailImageAdapter(imageFiles)
+            // 绘制小圆点
+            layoutDots.removeAllViews()
+            imageFiles.forEachIndexed { i, _ ->
+                val dot = ImageView(this).apply {
+                    val size = 8.dp
+                    layoutParams = LinearLayout.LayoutParams(size, size).apply { setMargins(4.dp, 0, 4.dp, 0) }
+                    setImageResource(if (i == 0) R.drawable.dot_active else R.drawable.dot_inactive)
+                }
+                layoutDots.addView(dot)
             }
+            vpImages.registerOnPageChangeCallback(object : androidx.viewpager2.widget.ViewPager2.OnPageChangeCallback() {
+                override fun onPageSelected(pos: Int) {
+                    for (j in 0 until layoutDots.childCount) {
+                        (layoutDots.getChildAt(j) as ImageView).setImageResource(
+                            if (j == pos) R.drawable.dot_active else R.drawable.dot_inactive
+                        )
+                    }
+                }
+            })
+        } else {
+            vpImages.visibility = View.GONE
+            layoutDots.visibility = View.GONE
         }
     }
 
@@ -293,7 +322,6 @@ class DetailActivity : BaseActivity() {
     private fun setupShareButton(item: Item) {
         val btnShare = findViewById<MaterialButton>(R.id.btnShare)
         btnShare.setOnClickListener {
-            // 构建分享文本
             val shareText = "【${if (item.type == "lost") "失物" else "招领"}】${item.name}\n地点: ${item.addressText.ifEmpty { item.location }}\n联系方式: ${item.contact}\n描述: ${item.description}"
             val intent = Intent(Intent.ACTION_SEND)
             intent.type = "text/plain"
@@ -301,4 +329,22 @@ class DetailActivity : BaseActivity() {
             startActivity(Intent.createChooser(intent, "分享"))
         }
     }
+
+    private inner class DetailImageAdapter(private val files: List<File>) :
+        RecyclerView.Adapter<DetailImageAdapter.VH>() {
+        override fun getItemCount() = files.size
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
+            val iv = ImageView(parent.context).apply {
+                layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 260.dp)
+                scaleType = ImageView.ScaleType.CENTER_CROP
+            }
+            return VH(iv)
+        }
+        override fun onBindViewHolder(holder: VH, position: Int) {
+            Glide.with(this@DetailActivity).load(files[position]).centerCrop().into(holder.iv)
+        }
+        inner class VH(val iv: ImageView) : RecyclerView.ViewHolder(iv)
+    }
+
+    private val Int.dp: Int get() = (this * resources.displayMetrics.density).toInt()
 }

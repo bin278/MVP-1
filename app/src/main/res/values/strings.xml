@@ -65,4 +65,23 @@
     <string name="views_count">%d 次浏览</string>
     <string name="avatar">设置头像</string>
     <string name="select_avatar">选择头像</string>
+    <string name="logging_in">登录中…</string>
+    <string name="registering">注册中…</string>
+    <string name="password_too_short">密码长度不能少于6位</string>
+    <string name="edit_profile">编辑个人信息</string>
+    <string name="edit_profile_title">修改个人信息</string>
+    <string name="save">保存</string>
+    <string name="update_success">更新成功</string>
+    <string name="update_fail">更新失败</string>
+    <string name="ai_match">智能匹配</string>
+    <string name="ai_chat_title">智能匹配助手</string>
+    <string name="ai_input_hint">描述你丢失或捡到的物品…</string>
+    <string name="ai_quick_lost">我丢了钥匙</string>
+    <string name="ai_quick_found">我捡到手机</string>
+    <string name="ai_quick_backpack">我丢了书包</string>
+    <string name="ai_matching">正在为你匹配…</string>
+    <string name="ai_no_match">暂未找到匹配的物品，建议先浏览公告板或稍后再试。</string>
+    <string name="ai_network_error">网络错误，请检查连接</string>
+    <string name="ai_service_unavailable">AI 服务暂不可用，为您展示本地匹配结果</string>
+    <string name="ai_view_detail">查看详情</string>
 </resources>

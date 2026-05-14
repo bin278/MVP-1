@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 黄绿色水平渐变背景 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <gradient
+        android:startColor="#F9D423"
+        android:endColor="#A0D9B3"
+        android:angle="0" />
+</shape>

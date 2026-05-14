@@ -64,6 +64,39 @@ class UserManager(context: Context) {
         )
     }
 
+    /**
+     * 更新当前登录用户的个人信息（昵称、学号、校区）
+     * @param nickname 新的昵称
+     * @param studentId 新的学号
+     * @param campus 新的校区
+     * @return 是否更新成功
+     */
+    fun updateUserInfo(nickname: String, studentId: String, campus: String): Boolean {
+        val username = getCurrentUser()
+        if (username.isEmpty()) return false
+        val key = "user_$username"
+        prefs.edit()
+            .putString("${key}_nickname", nickname)
+            .putString("${key}_student_id", studentId)
+            .putString("${key}_campus", campus)
+            .commit()
+        return true
+    }
+
+    /**
+     * 更新当前登录用户的头像路径
+     * 使用 commit() 同步写入，确保保存后立即能被读取
+     */
+    fun updateAvatar(avatarPath: String): Boolean {
+        val username = getCurrentUser()
+        if (username.isEmpty()) return false
+        val key = "user_$username"
+        prefs.edit()
+            .putString("${key}_avatar", avatarPath)
+            .commit()
+        return true
+    }
+
     fun getCurrentNickname(): String {
         return getUserInfo().nickname
     }

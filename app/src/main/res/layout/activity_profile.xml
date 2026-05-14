@@ -1,164 +1,328 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/gray_bg">
+    android:background="@color/white"
+    android:orientation="vertical">
+
+    <!-- 顶部用户信息栏：黄绿色渐变背景 -->
+    <LinearLayout
+        android:id="@+id/layoutProfileHeader"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_gradient_profile"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp"
+        android:paddingTop="48dp"
+        android:paddingBottom="24dp">
+
+        <ImageView
+            android:id="@+id/ivProfileAvatar"
+            android:layout_width="70dp"
+            android:layout_height="70dp"
+            android:contentDescription="@string/avatar" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvUsername"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="用户名"
+                android:textColor="@android:color/black"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:alpha="0.5"
+                    android:contentDescription="id"
+                    android:src="@android:drawable/ic_menu_agenda"
+                    android:tint="@android:color/darker_gray" />
+
+                <TextView
+                    android:id="@+id/tvStudentId"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:text="学号: 未设置"
+                    android:textColor="@android:color/darker_gray"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:alpha="0.5"
+                    android:contentDescription="campus"
+                    android:src="@android:drawable/ic_menu_compass"
+                    android:tint="@android:color/darker_gray" />
+
+                <TextView
+                    android:id="@+id/tvCampusLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:text="校区: 未设置"
+                    android:textColor="@android:color/darker_gray"
+                    android:textSize="13sp" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:paddingTop="8dp">
 
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="2dp"
-            app:cardBackgroundColor="@android:color/transparent"
-            app:strokeWidth="0dp">
-
-            <FrameLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/bg_gradient_header">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="28dp"
-                    android:gravity="center">
-
-                    <ImageView
-                        android:id="@+id/ivProfileAvatar"
-                        android:layout_width="80dp"
-                        android:layout_height="80dp"
-                        android:contentDescription="@string/avatar" />
-
-                    <TextView
-                        android:id="@+id/tvUsername"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textSize="22sp"
-                        android:textColor="@color/white"
-                        android:textStyle="bold"
-                        android:layout_marginTop="12dp" />
-
-                    <TextView
-                        android:id="@+id/tvStudentInfo"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textSize="13sp"
-                        android:textColor="#B3FFFFFF"
-                        android:layout_marginTop="4dp" />
-                </LinearLayout>
-            </FrameLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="1dp"
-            app:cardBackgroundColor="@color/card_white"
-            app:strokeWidth="0dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
-
-                <LinearLayout
-                    android:id="@+id/tvMyPublish"
-                    android:layout_width="match_parent"
-                    android:layout_height="56dp"
-                    android:gravity="center_vertical"
-                    android:paddingStart="20dp"
-                    android:paddingEnd="20dp"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:background="?attr/selectableItemBackground"
-                    android:orientation="horizontal">
-
-                    <ImageView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:src="@android:drawable/ic_menu_edit"
-                        android:contentDescription="publish" />
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/my_publish"
-                        android:textSize="15sp"
-                        android:textColor="@color/text_primary"
-                        android:layout_marginStart="12dp" />
-
-                    <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:src="@android:drawable/ic_media_play"
-                        android:alpha="0.3"
-                        android:contentDescription="arrow" />
-                </LinearLayout>
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="0.5dp"
-                    android:background="@color/divider"
-                    android:layout_marginStart="56dp"
-                    android:layout_marginEnd="16dp" />
-
-                <LinearLayout
-                    android:id="@+id/tvMyFavorite"
-                    android:layout_width="match_parent"
-                    android:layout_height="56dp"
-                    android:gravity="center_vertical"
-                    android:paddingStart="20dp"
-                    android:paddingEnd="20dp"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:background="?attr/selectableItemBackground"
-                    android:orientation="horizontal">
-
-                    <ImageView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:src="@android:drawable/btn_star_big_on"
-                        android:contentDescription="favorite" />
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/my_favorite"
-                        android:textSize="15sp"
-                        android:textColor="@color/text_primary"
-                        android:layout_marginStart="12dp" />
-
-                    <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:src="@android:drawable/ic_media_play"
-                        android:alpha="0.3"
-                        android:contentDescription="arrow" />
-                </LinearLayout>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnLogout"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        <LinearLayout
+            android:id="@+id/tvMyPublish"
             android:layout_width="match_parent"
             android:layout_height="52dp"
-            android:text="@string/logout"
-            android:textColor="@color/red"
-            android:layout_marginTop="8dp"
-            app:strokeColor="@color/red" />
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp">
+
+            <ImageView
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:alpha="0.6"
+                android:contentDescription="publish"
+                android:src="@android:drawable/ic_menu_agenda"
+                android:tint="@android:color/black" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_weight="1"
+                android:text="我的发布"
+                android:textColor="@android:color/black"
+                android:textSize="15sp" />
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:alpha="0.3"
+                android:contentDescription="arrow"
+                android:src="@android:drawable/ic_media_play" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="0.5dp"
+            android:layout_marginStart="56dp"
+            android:layout_marginEnd="20dp"
+            android:background="#EEE" />
+
+        <LinearLayout
+            android:id="@+id/tvMyClaim"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp">
+
+            <ImageView
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:alpha="0.6"
+                android:contentDescription="claim"
+                android:src="@android:drawable/ic_menu_info_details"
+                android:tint="@android:color/black" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_weight="1"
+                android:text="我的认领"
+                android:textColor="@android:color/black"
+                android:textSize="15sp" />
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:alpha="0.3"
+                android:contentDescription="arrow"
+                android:src="@android:drawable/ic_media_play" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="0.5dp"
+            android:layout_marginStart="56dp"
+            android:layout_marginEnd="20dp"
+            android:background="#EEE" />
+
+        <LinearLayout
+            android:id="@+id/tvContactService"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp">
+
+            <ImageView
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:alpha="0.6"
+                android:contentDescription="service"
+                android:src="@android:drawable/ic_menu_call"
+                android:tint="@android:color/black" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_weight="1"
+                android:text="联系客服"
+                android:textColor="@android:color/black"
+                android:textSize="15sp" />
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:alpha="0.3"
+                android:contentDescription="arrow"
+                android:src="@android:drawable/ic_media_play" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="0.5dp"
+            android:layout_marginStart="56dp"
+            android:layout_marginEnd="20dp"
+            android:background="#EEE" />
+
+        <LinearLayout
+            android:id="@+id/tvAbout"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp">
+
+            <ImageView
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:alpha="0.6"
+                android:contentDescription="about"
+                android:src="@android:drawable/ic_dialog_info"
+                android:tint="@android:color/black" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_weight="1"
+                android:text="关于平台"
+                android:textColor="@android:color/black"
+                android:textSize="15sp" />
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:alpha="0.3"
+                android:contentDescription="arrow"
+                android:src="@android:drawable/ic_media_play" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="0.5dp"
+            android:layout_marginStart="56dp"
+            android:layout_marginEnd="20dp"
+            android:background="#EEE" />
+
+        <LinearLayout
+            android:id="@+id/tvEditProfile"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp">
+
+            <ImageView
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:alpha="0.6"
+                android:contentDescription="edit"
+                android:src="@android:drawable/ic_menu_manage"
+                android:tint="@android:color/black" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_weight="1"
+                android:text="编辑资料"
+                android:textColor="@android:color/black"
+                android:textSize="15sp" />
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:alpha="0.3"
+                android:contentDescription="arrow"
+                android:src="@android:drawable/ic_media_play" />
+        </LinearLayout>
     </LinearLayout>
-</ScrollView>
+
+    <TextView
+        android:id="@+id/btnLogout"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center"
+        android:text="退出登录"
+        android:textColor="#E53935"
+        android:textSize="16sp" />
+
+</LinearLayout>

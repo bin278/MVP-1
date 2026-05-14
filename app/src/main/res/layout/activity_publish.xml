@@ -314,6 +314,23 @@
                         android:layout_marginTop="10dp"
                         android:contentDescription="预览图片" />
 
+                    <!-- 多图预览区域 -->
+                    <HorizontalScrollView
+                        android:id="@+id/hsvImages"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:visibility="gone"
+                        android:scrollbars="none">
+
+                        <LinearLayout
+                            android:id="@+id/layoutImageList"
+                            android:layout_width="wrap_content"
+                            android:layout_height="120dp"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical" />
+                    </HorizontalScrollView>
+
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
