@@ -135,15 +135,16 @@ class DetailActivity : BaseActivity() {
      * 设置拨号按钮：点击后打开系统拨号界面
      */
     private fun setupDialButton(item: Item) {
-        val btnDial = findViewById<MaterialButton>(R.id.btnFavorite) // 复用引用
-        // 在联系方式卡片中找拨号按钮（需要单独找）
-        // btnFavorite 已经是底部收藏按钮，我们需要在 displayItem 之后找联系卡片中的拨号按钮
-        // 但是布局中没有单独的拨号按钮 ID，我们在联系方式右边有一个 TextButton
-        // 需要给这个拨号按钮加 ID — 但当前布局中没有给它 ID，所以暂时跳过
-        // 访问联系方式卡片区域通过遍历来找
-        // 简单起见：给联系方式右边的按钮通过 resource ID 找到（需要在 XML 中给它一个 id）
-        // 当前 XML 中底部按钮是 btnFavorite/btnShare，上面联系方式卡片中的拨号按钮没有设 id
-        // 不影响 — 保持现有逻辑
+        val btnDial = findViewById<MaterialButton>(R.id.btnDial)
+        btnDial.setOnClickListener {
+            val phoneNumber = item.contact
+            if (phoneNumber.isNotEmpty()) {
+                val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phoneNumber"))
+                startActivity(intent)
+            } else {
+                Toast.makeText(this, "暂无联系方式", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     /**
@@ -272,7 +273,7 @@ class DetailActivity : BaseActivity() {
         override fun getItemCount() = files.size
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
             val iv = ImageView(parent.context).apply {
-                layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 260.dp)
+                layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
                 scaleType = ImageView.ScaleType.CENTER_CROP
             }
             return VH(iv)

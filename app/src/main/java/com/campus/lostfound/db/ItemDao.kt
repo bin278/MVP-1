@@ -108,16 +108,16 @@ class ItemDao(context: Context) {
         fun cursorToItemStatic(cursor: android.database.Cursor): Item {
             return Item(
                 id = cursor.getLong(cursor.getColumnIndexOrThrow("id")),
-                type = cursor.getString(cursor.getColumnIndexOrThrow("type")),
-                name = cursor.getString(cursor.getColumnIndexOrThrow("name")),
+                type = cursor.getString(cursor.getColumnIndexOrThrow("type")) ?: "",
+                name = cursor.getString(cursor.getColumnIndexOrThrow("name")) ?: "",
                 category = cursor.getString(cursor.getColumnIndexOrThrow("category")) ?: "",
                 location = cursor.getString(cursor.getColumnIndexOrThrow("location")) ?: "",
                 time = cursor.getString(cursor.getColumnIndexOrThrow("time")) ?: "",
-                contact = cursor.getString(cursor.getColumnIndexOrThrow("contact")),
+                contact = cursor.getString(cursor.getColumnIndexOrThrow("contact")) ?: "",
                 description = cursor.getString(cursor.getColumnIndexOrThrow("description")) ?: "",
                 imagePath = cursor.getString(cursor.getColumnIndexOrThrow("image_path")) ?: "",
-                publisher = cursor.getString(cursor.getColumnIndexOrThrow("publisher")),
-                publishTime = cursor.getString(cursor.getColumnIndexOrThrow("publish_time")),
+                publisher = cursor.getString(cursor.getColumnIndexOrThrow("publisher")) ?: "",
+                publishTime = cursor.getString(cursor.getColumnIndexOrThrow("publish_time")) ?: "",
                 latitude = cursor.getDouble(cursor.getColumnIndexOrThrow("latitude")),
                 longitude = cursor.getDouble(cursor.getColumnIndexOrThrow("longitude")),
                 addressText = cursor.getString(cursor.getColumnIndexOrThrow("address_text")) ?: ""

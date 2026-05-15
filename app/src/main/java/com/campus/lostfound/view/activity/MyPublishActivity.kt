@@ -39,12 +39,37 @@ class MyPublishActivity : BaseActivity() {
             startActivity(intent)
         }, userManager)
 
+        adapter.setOnItemLongClickListener { item ->
+            showDeleteConfirmDialog(item)
+        }
+
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
 
         swipeRefresh.setOnRefreshListener { loadData() }
 
         loadData()
+    }
+
+    private fun showDeleteConfirmDialog(item: Item) {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.confirm_delete)
+            .setMessage(R.string.delete_msg)
+            .setPositiveButton(R.string.confirm) { _, _ ->
+                deleteItem(item)
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun deleteItem(item: Item) {
+        val success = itemDao.delete(item.id) > 0
+        if (success) {
+            Toast.makeText(this, "删除成功", Toast.LENGTH_SHORT).show()
+            loadData()
+        } else {
+            Toast.makeText(this, "删除失败", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun loadData() {

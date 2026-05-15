@@ -25,6 +25,11 @@ class PostAdapter(
 ) : RecyclerView.Adapter<PostAdapter.ViewHolder>() {
 
     private val items = mutableListOf<Item>()
+    private var onItemLongClickListener: ((Item) -> Unit)? = null
+
+    fun setOnItemLongClickListener(listener: (Item) -> Unit) {
+        onItemLongClickListener = listener
+    }
 
     fun setItems(newItems: List<Item>) {
         items.clear()
@@ -127,6 +132,10 @@ class PostAdapter(
             btnStatus.text = context.getString(R.string.not_claimed)
 
             itemView.setOnClickListener { onItemClick(item) }
+            itemView.setOnLongClickListener {
+                onItemLongClickListener?.invoke(item)
+                true
+            }
         }
 
         /** 显示文字头像（首字） */
