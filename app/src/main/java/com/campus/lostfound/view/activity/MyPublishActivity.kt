@@ -40,6 +40,7 @@ class MyPublishActivity : BaseActivity() {
         }, userManager)
 
         adapter.setOnItemLongClickListener { item ->
+            Toast.makeText(this, "长按删除：${item.name}", Toast.LENGTH_SHORT).show()
             showDeleteConfirmDialog(item)
         }
 
