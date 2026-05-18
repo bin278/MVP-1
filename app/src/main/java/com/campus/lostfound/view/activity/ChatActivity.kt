@@ -7,28 +7,24 @@ import android.widget.Toast
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.campus.lostfound.R
 import com.campus.lostfound.ai.AiHelper
-import com.campus.lostfound.api.RetrofitClient
 import com.campus.lostfound.databinding.ActivityChatBinding
-import com.campus.lostfound.db.ItemDao
+import com.campus.lostfound.firebase.FirebaseHelper
+import com.campus.lostfound.firebase.Item
 import com.campus.lostfound.model.ChatMessage
 import com.campus.lostfound.model.MatchItem
-import com.campus.lostfound.model.MatchRequest
-import com.campus.lostfound.model.MatchResponse
 import com.campus.lostfound.view.adapter.ChatAdapter
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
+import org.json.JSONArray
+import org.json.JSONObject
 
 /**
  * AI 智能匹配对话页面
- * 用户通过自然语言描述丢失/捡到的物品，系统调用 DeepSeek API 进行语义匹配
- * 若后端不可用，则降级为本地关键词匹配
+ * 用户通过自然语言描述丢失/捡到的物品，系统直接调用 DeepSeek API 进行语义匹配
+ * 若 API 不可用，则降级为本地关键词匹配
  */
 class ChatActivity : BaseActivity() {
 
     private lateinit var binding: ActivityChatBinding
     private lateinit var chatAdapter: ChatAdapter
-    private lateinit var itemDao: ItemDao
     private lateinit var aiHelper: AiHelper
     // 是否正在等待回复，防止重复发送
     private var isWaitingResponse = false
@@ -38,7 +34,6 @@ class ChatActivity : BaseActivity() {
         binding = ActivityChatBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        itemDao = ItemDao(this)
         aiHelper = AiHelper()
 
         // 初始化消息列表
@@ -94,114 +89,170 @@ class ChatActivity : BaseActivity() {
         isWaitingResponse = true
         binding.btnSend.isEnabled = false
 
-        // 尝试调用后端 AI 服务
-        callAiApi(text)
+        // 从 Firebase 获取物品数据，然后调用 AI API
+        fetchItemsAndMatch(text)
     }
 
     /**
-     * 调用后端 Flask 服务的 DeepSeek 匹配接口
-     * 失败时降级为本地关键词匹配
+     * 从 Firebase 获取物品数据并进行 AI 匹配
      */
-    private fun callAiApi(query: String) {
-        RetrofitClient.instance.matchItems(MatchRequest(query))
-            .enqueue(object : Callback<MatchResponse> {
-                override fun onResponse(call: Call<MatchResponse>, response: Response<MatchResponse>) {
-                    chatAdapter.removeLastIfLoading()
-                    if (response.isSuccessful && response.body() != null) {
-                        val body = response.body()!!
-                        if (body.error != null) {
-                            // 后端返回了错误，降级到本地匹配
-                            showFallbackResult(query)
-                            return
+    private fun fetchItemsAndMatch(query: String) {
+        FirebaseHelper.getAllItems(null) { items ->
+            if (items.isEmpty()) {
+                chatAdapter.removeLastIfLoading()
+                chatAdapter.addMessage(
+                    ChatMessage.BotResult(
+                        summary = getString(R.string.ai_no_match),
+                        matches = emptyList()
+                    )
+                )
+                resetSendState()
+                scrollToBottom()
+                return@getAllItems
+            }
+
+            // 将物品序列化为文本格式
+            val itemsText = serializeItems(items)
+
+            // 直接调用前端 DeepSeek API
+            callFrontendAiApi(query, itemsText)
+        }
+    }
+
+    /**
+     * 将物品列表序列化为文本格式
+     */
+    private fun serializeItems(items: List<Item>): String {
+        val lines = mutableListOf<String>()
+        items.forEachIndexed { index, item ->
+            lines.add(
+                "ID:${index + 1} | " +
+                        "类型:${if (item.type == "found") "招领" else "失物"} | " +
+                        "物品名称:${item.name ?: ""} | " +
+                        "类别:${item.category ?: ""} | " +
+                        "地点:${item.addressText ?: item.location ?: ""} | " +
+                        "时间:${item.time ?: ""} | " +
+                        "描述:${item.description ?: "无"}"
+            )
+        }
+        return lines.joinToString("\n")
+    }
+
+    /**
+     * 直接在前端调用 DeepSeek API
+     */
+    private fun callFrontendAiApi(query: String, itemsText: String) {
+        aiHelper.callDeepSeekApi(query, itemsText) { result, error ->
+            runOnUiThread {
+                chatAdapter.removeLastIfLoading()
+
+                if (error != null) {
+                    // API 调用失败，降级到本地匹配
+                    showFallbackResult(query)
+                } else if (result != null) {
+                    try {
+                        // 解析 AI 返回的 JSON 结果
+                        val json = JSONObject(result)
+                        val summary = json.getString("summary")
+                        val matchesArray = json.getJSONArray("matches")
+                        val matches = mutableListOf<MatchItem>()
+
+                        for (i in 0 until matchesArray.length()) {
+                            val matchObj = matchesArray.getJSONObject(i)
+                            matches.add(
+                                MatchItem(
+                                    id = matchObj.getLong("id"),
+                                    score = matchObj.getInt("score"),
+                                    reason = matchObj.getString("reason"),
+                                    suggestion = matchObj.getString("suggestion")
+                                )
+                            )
                         }
-                        chatAdapter.addMessage(ChatMessage.BotResult(body.summary, body.matches))
-                    } else {
+
+                        chatAdapter.addMessage(ChatMessage.BotResult(summary, matches))
+                    } catch (e: Exception) {
                         showFallbackResult(query)
                     }
-                    resetSendState()
-                    scrollToBottom()
+                } else {
+                    showFallbackResult(query)
                 }
 
-                override fun onFailure(call: Call<MatchResponse>, t: Throwable) {
-                    chatAdapter.removeLastIfLoading()
-                    // 网络失败，降级到本地关键词匹配
-                    showFallbackResult(query)
-                    resetSendState()
-                    scrollToBottom()
-                }
-            })
+                resetSendState()
+                scrollToBottom()
+            }
+        }
     }
 
     /**
      * 本地关键词匹配降级方案
-     * 当后端 AI 服务不可用时使用本地 AiHelper 进行简单匹配
      */
     private fun showFallbackResult(query: String) {
-        val items = itemDao.queryAll()
-        if (items.isEmpty()) {
-            chatAdapter.addMessage(
-                ChatMessage.BotResult(
-                    summary = getString(R.string.ai_no_match),
-                    matches = emptyList()
+        FirebaseHelper.getAllItems(null) { items ->
+            if (items.isEmpty()) {
+                chatAdapter.addMessage(
+                    ChatMessage.BotResult(
+                        summary = getString(R.string.ai_no_match),
+                        matches = emptyList()
+                    )
                 )
-            )
-            return
-        }
+                return@getAllItems
+            }
 
-        // 使用 AiHelper 的 keyword 匹配 + 简单评分
-        val keywords = query.split(" ", "，", "。", "、", "的", "在", "了", "是")
-            .filter { it.length >= 2 }
+            // 使用关键词匹配
+            val keywords = query.split(" ", "，", "。", "、", "的", "在", "了", "是")
+                .filter { it.length >= 2 }
 
-        val matched = items.mapNotNull { item ->
-            var score = 0
-            val reasons = mutableListOf<String>()
+            val matched = items.mapIndexedNotNull { index, item ->
+                var score = 0
+                val reasons = mutableListOf<String>()
 
-            // 名称匹配
-            for (kw in keywords) {
-                if (item.name.contains(kw, ignoreCase = true)) {
-                    score += 30
-                    reasons.add("物品名称包含「$kw」")
+                // 名称匹配
+                for (kw in keywords) {
+                    if (item.name?.contains(kw, ignoreCase = true) == true) {
+                        score += 30
+                        reasons.add("物品名称包含「$kw」")
+                    }
                 }
-            }
-            // 分类匹配
-            val category = aiHelper.classify(query)
-            if (category == item.category && category != "其他") {
-                score += 20
-                reasons.add("类别吻合")
-            }
-            // 描述匹配
-            for (kw in keywords) {
-                if (item.description.contains(kw, ignoreCase = true)) {
-                    score += 15
-                }
-            }
-            // 地点关键词匹配
-            val locationKeywords = listOf("图书馆", "食堂", "操场", "教学楼", "体育馆", "自习室", "宿舍")
-            for (loc in locationKeywords) {
-                if (query.contains(loc) && item.location.contains(loc)) {
+                // 分类匹配
+                val category = aiHelper.classify(query)
+                if (category == item.category && category != "其他") {
                     score += 20
-                    reasons.add("地点「$loc」一致")
-                    break
+                    reasons.add("类别吻合")
                 }
+                // 描述匹配
+                for (kw in keywords) {
+                    if (item.description?.contains(kw, ignoreCase = true) == true) {
+                        score += 15
+                    }
+                }
+                // 地点关键词匹配
+                val locationKeywords = listOf("图书馆", "食堂", "操场", "教学楼", "体育馆", "自习室", "宿舍")
+                for (loc in locationKeywords) {
+                    if (query.contains(loc) && (item.location?.contains(loc) == true || item.addressText?.contains(loc) == true)) {
+                        score += 20
+                        reasons.add("地点「$loc」一致")
+                        break
+                    }
+                }
+
+                if (score >= 30) {
+                    MatchItem(
+                        id = (index + 1).toLong(),
+                        score = score.coerceAtMost(95),
+                        reason = reasons.take(2).joinToString("；").ifEmpty { "关键词匹配" },
+                        suggestion = "请查看详情确认是否为您寻找的物品"
+                    )
+                } else null
+            }.sortedByDescending { it.score }.take(3)
+
+            val summary = if (matched.isNotEmpty()) {
+                "${getString(R.string.ai_service_unavailable)}\n共找到 ${matched.size} 条可能匹配："
+            } else {
+                getString(R.string.ai_no_match)
             }
 
-            if (score >= 30) {
-                MatchItem(
-                    id = item.id,
-                    score = score.coerceAtMost(95),
-                    reason = reasons.take(2).joinToString("；").ifEmpty { "关键词匹配" },
-                    suggestion = "请查看详情确认是否为您寻找的物品"
-                )
-            } else null
-        }.sortedByDescending { it.score }.take(3)
-
-        val summary = if (matched.isNotEmpty()) {
-            "${getString(R.string.ai_service_unavailable)}\n共找到 ${matched.size} 条可能匹配："
-        } else {
-            getString(R.string.ai_no_match)
+            chatAdapter.addMessage(ChatMessage.BotResult(summary = summary, matches = matched))
         }
-
-        chatAdapter.addMessage(ChatMessage.BotResult(summary = summary, matches = matched))
     }
 
     /**

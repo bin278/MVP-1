@@ -65,6 +65,9 @@ class MainActivity : BaseActivity() {
     private var selectedCategory: String? = null
     private var selectedTabIndex = 0
 
+    // 当前选中的分类标签位置（始终初始化为0）
+    private var currentSelectedTabIndex = 0
+
     // 分类列表（显示名称与数据库映射）
     private val categories = listOf("全部", "数码电子", "钱包证件", "图书文具", "生活用品", "衣物配饰")
     private val categoryMap = mapOf(
@@ -260,9 +263,11 @@ class MainActivity : BaseActivity() {
                 text = category
                 textSize = 14f
                 setPadding(24, 12, 24, 12)
-                setTextColor(if (index == selectedTabIndex) getColor(R.color.primary) else getColor(R.color.text_secondary))
-                setBackgroundResource(if (index == selectedTabIndex) R.drawable.bg_campus_tag else android.R.color.transparent)
+                // 使用 currentSelectedTabIndex 确保正确的选中状态
+                setTextColor(if (index == currentSelectedTabIndex) getColor(R.color.primary) else getColor(R.color.text_secondary))
+                setBackgroundResource(if (index == currentSelectedTabIndex) R.drawable.bg_campus_tag else android.R.color.transparent)
                 setOnClickListener {
+                    currentSelectedTabIndex = index
                     selectedTabIndex = index
                     selectedCategory = if (index == 0) null else categoryMap[category]
                     setupCategoryTabs()
