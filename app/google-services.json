@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "910921738635",
+    "project_id": "keshe-306fe",
+    "storage_bucket": "keshe-306fe.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:910921738635:android:1e0ee0e54733ad53b0e78e",
+        "android_client_info": {
+          "package_name": "com.campus.lostfound"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAO-kGgQFETfwytKCJxg1YBGY_0DVcrslw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

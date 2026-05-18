@@ -1,0 +1,14 @@
+# 校园失物招领系统 - Python后端依赖
+# 安装命令: pip install -r requirements.txt
+
+# Web框架
+Flask==3.0.0
+
+# 跨域支持
+flask-cors==4.0.0
+
+# MySQL数据库驱动
+PyMySQL==1.1.0
+
+# JSON处理（通常已包含在Python标准库）
+# 无需额外安装

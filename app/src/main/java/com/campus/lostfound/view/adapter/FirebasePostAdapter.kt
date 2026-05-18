@@ -13,20 +13,18 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.bitmap.RoundedCorners
 import com.bumptech.glide.request.RequestOptions
 import com.campus.lostfound.R
-import com.campus.lostfound.model.Item
+import com.campus.lostfound.firebase.Item
 import com.campus.lostfound.sharedpref.UserManager
-import com.campus.lostfound.util.TimeUtil
 import com.google.android.material.button.MaterialButton
-import java.io.File
 
 /**
- * 发布物品列表适配器
+ * Firebase物品列表适配器
  * 负责展示失物招领列表项，支持点击跳转和长按删除功能
  */
-class PostAdapter(
+class FirebasePostAdapter(
     private val onItemClick: (Item) -> Unit,
     private val userManager: UserManager
-) : RecyclerView.Adapter<PostAdapter.ViewHolder>() {
+) : RecyclerView.Adapter<FirebasePostAdapter.ViewHolder>() {
 
     // 物品列表数据
     private val items = mutableListOf<Item>()
@@ -102,47 +100,36 @@ class PostAdapter(
          */
         fun bind(item: Item) {
             val context = itemView.context
-            // 获取发布者信息
-            val publisherInfo = userManager.getUserInfo(item.publisher)
-            val nickname = publisherInfo.nickname.ifEmpty { item.publisher }
-            val campus = publisherInfo.campus.ifEmpty { "校园" }
+            
+            // 设置发布者信息
+            val publisherName = item.publisherName ?: item.publisherId ?: "用户"
+            tvNickname.text = publisherName
+            tvCampusTag.text = "校园"
 
-            // 头像：有图片用 Glide 圆形加载，无图片显示首字
-            if (publisherInfo.avatarPath.isNotEmpty()) {
-                val avatarFile = File(publisherInfo.avatarPath)
-                if (avatarFile.exists()) {
-                    ivAvatar.visibility = View.VISIBLE
-                    tvAvatar.visibility = View.GONE
-                    Glide.with(context)
-                        .load(avatarFile)
-                        .circleCrop()
-                        .into(ivAvatar)
-                } else {
-                    showTextAvatar(nickname)
+            // 头像：显示首字
+            showTextAvatar(publisherName)
+
+            // 设置相对时间
+            val publishTime = item.publishTime
+            tvPublishTime.text = if (publishTime != null) {
+                val relativeTime = (System.currentTimeMillis() - publishTime) / 1000
+                when {
+                    relativeTime < 60 -> "刚刚"
+                    relativeTime < 3600 -> "${relativeTime / 60} 分钟前"
+                    relativeTime < 86400 -> "${relativeTime / 3600} 小时前"
+                    else -> "${relativeTime / 86400} 天前"
                 }
             } else {
-                showTextAvatar(nickname)
-            }
-
-            // 设置发布者昵称和校区标签
-            tvNickname.text = nickname
-            tvCampusTag.text = campus
-
-            // 设置相对时间（如 "3 小时前"）
-            val publishTimeMillis = TimeUtil.parseDate(item.publishTime)
-            tvPublishTime.text = if (publishTimeMillis > 0) {
-                TimeUtil.formatRelativeTime(publishTimeMillis)
-            } else {
-                item.publishTime
+                "未知时间"
             }
 
             // 设置描述：物品名称加粗 + 地点 + 描述
             val desc = buildDescription(item)
             tvDescription.text = desc
 
-            // 图片加载
-            val imageFiles = getImageFiles(item.imagePath)
-            if (imageFiles.isEmpty()) {
+            // 图片加载（从URL加载）
+            val imageUrl = item.imageUrl
+            if (imageUrl.isNullOrEmpty()) {
                 layoutImages.visibility = View.GONE
             } else {
                 layoutImages.visibility = View.VISIBLE
@@ -151,26 +138,15 @@ class PostAdapter(
                     .centerCrop()
                 // 加载第一张图片
                 Glide.with(context)
-                    .load(imageFiles[0])
+                    .load(imageUrl)
                     .apply(requestOptions)
                     .placeholder(android.R.drawable.ic_menu_gallery)
                     .into(ivImage1)
-
-                // 加载第二张图片（如果有）
-                if (imageFiles.size > 1) {
-                    ivImage2.visibility = View.VISIBLE
-                    Glide.with(context)
-                        .load(imageFiles[1])
-                        .apply(requestOptions)
-                        .placeholder(android.R.drawable.ic_menu_gallery)
-                        .into(ivImage2)
-                } else {
-                    ivImage2.visibility = View.GONE
-                }
+                ivImage2.visibility = View.GONE
             }
 
             // 设置浏览量（模拟数据）
-            val viewCount = (item.id % 37 + 10).toInt()
+            val viewCount = (item.id?.hashCode()?.mod(37) ?: 0) + 10
             tvViews.text = context.getString(R.string.views_count, viewCount)
             btnStatus.text = context.getString(R.string.not_claimed)
 
@@ -199,22 +175,17 @@ class PostAdapter(
          * @return 格式化后的描述文本
          */
         private fun buildDescription(item: Item): CharSequence {
-            val sb = StringBuilder()
-            sb.append(item.name)
-            // 添加分类（排除"其他"）
-            if (item.category.isNotEmpty() && item.category != "其他") {
-                sb.append(" · ").append(item.category)
-            }
-            val descPart = item.description
-            val locationText = if (item.addressText.isNotEmpty()) item.addressText else item.location
-            // 构建完整文本
+            val name = item.name ?: ""
+            val location = item.location ?: ""
+            val description = item.description ?: ""
+            
             val fullText = buildString {
-                append(sb)
-                if (locationText.isNotEmpty()) {
-                    append(" 📍").append(locationText)
+                append(name)
+                if (location.isNotEmpty()) {
+                    append(" 📍").append(location)
                 }
-                if (descPart.isNotEmpty()) {
-                    append("。").append(descPart)
+                if (description.isNotEmpty()) {
+                    append("。").append(description)
                 }
             }
             // 创建带样式的文本：物品名称加粗
@@ -222,23 +193,10 @@ class PostAdapter(
             spannable.setSpan(
                 StyleSpan(Typeface.BOLD),
                 0,
-                item.name.length,
+                name.length,
                 android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
             )
             return spannable
-        }
-
-        /**
-         * 从路径字符串解析图片文件列表
-         * @param imagePath 图片路径字符串（多图用 ||| 分隔）
-         * @return 有效的图片文件列表
-         */
-        private fun getImageFiles(imagePath: String): List<File> {
-            if (imagePath.isEmpty()) return emptyList()
-            // 多图路径以 ||| 分隔
-            return imagePath.split("|||")
-                .map { File(it) }
-                .filter { it.exists() }
         }
     }
 }

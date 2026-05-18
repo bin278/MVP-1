@@ -2,6 +2,7 @@ package com.campus.lostfound.model
 
 /**
  * 失物招领物品数据类
+ * 使用 Gson 进行 JSON 序列化/反序列化
  */
 data class Item(
     var id: Long = 0,                   // 数据库ID，主键
@@ -18,4 +19,22 @@ data class Item(
     var latitude: Double = 0.0,         // 纬度
     var longitude: Double = 0.0,        // 经度
     var addressText: String = ""        // 详细地址文字
-)
+) {
+    // 无参构造方法，用于 Gson 反序列化
+    constructor() : this(
+        id = 0,
+        type = "",
+        name = "",
+        category = "",
+        location = "",
+        time = "",
+        contact = "",
+        description = "",
+        imagePath = "",
+        publisher = "",
+        publishTime = "",
+        latitude = 0.0,
+        longitude = 0.0,
+        addressText = ""
+    )
+}
