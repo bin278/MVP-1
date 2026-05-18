@@ -10,6 +10,8 @@ import com.google.firebase.database.IgnoreExtraProperties
  * @property username 用户名（登录用）
  * @property password 密码（实际项目中应加密存储）
  * @property nickname 用户昵称
+ * @property studentId 学号
+ * @property campus 校区
  * @property phone 手机号码
  * @property email 邮箱地址
  * @property avatarUrl 头像图片URL
@@ -21,6 +23,8 @@ data class User(
     var username: String? = null,
     var password: String? = null,
     var nickname: String? = null,
+    var studentId: String? = null,
+    var campus: String? = null,
     var phone: String? = null,
     var email: String? = null,
     var avatarUrl: String? = null,

@@ -234,29 +234,21 @@ class EditProfileActivity : BaseActivity() {
         // 显示加载状态，防止重复点击
         showLoading(true)
 
-        // 模拟短暂延迟后执行更新，给用户更好的反馈感
-        binding.root.postDelayed({
-            try {
-                // 如果用户选择了新头像，先保存头像路径
-                if (avatarPath.isNotEmpty()) {
-                    userManager.updateAvatar(avatarPath)
-                }
+        // 如果用户选择了新头像，先保存头像路径
+        if (avatarPath.isNotEmpty()) {
+            userManager.updateAvatar(avatarPath)
+        }
 
-                // 调用 UserManager 写入昵称、学号、校区到 SharedPreferences
-                val success = userManager.updateUserInfo(nickname, studentId, campus)
-                if (success) {
-                    Toast.makeText(this, getString(R.string.update_success), Toast.LENGTH_SHORT).show()
-                    // 更新成功后关闭当前页面，回到个人信息页后会重新加载数据
-                    finish()
-                } else {
-                    Toast.makeText(this, getString(R.string.update_fail), Toast.LENGTH_SHORT).show()
-                    showLoading(false)
-                }
-            } catch (e: Exception) {
+        // 调用 UserManager 更新用户信息到 Firebase
+        userManager.updateUserInfo(nickname, studentId, campus) { success ->
+            if (success) {
+                Toast.makeText(this, getString(R.string.update_success), Toast.LENGTH_SHORT).show()
+                finish()
+            } else {
                 Toast.makeText(this, getString(R.string.update_fail), Toast.LENGTH_SHORT).show()
                 showLoading(false)
             }
-        }, 300)
+        }
     }
 
     /**

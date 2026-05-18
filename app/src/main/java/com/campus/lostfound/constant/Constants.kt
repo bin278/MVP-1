@@ -10,8 +10,9 @@ object Constants {
 
     // SharedPreferences相关
     const val PREF_NAME = "campus_lost_found"    // SharedPreferences名称
-    const val KEY_LOGIN_STATUS = "login_status"  // 登录状态键
-    const val KEY_CURRENT_USER = "current_user"  // 当前用户键
+    const val KEY_LOGIN_STATUS = "login_status"     // 登录状态键
+    const val KEY_CURRENT_USER = "current_user"     // 当前用户键
+    const val KEY_CURRENT_USER_ID = "current_user_id" // 当前用户ID（Firebase）
     const val KEY_NICKNAME = "nickname"          // 昵称键
     const val KEY_STUDENT_ID = "student_id"      // 学号键
     const val KEY_CAMPUS = "campus"              // 校区键

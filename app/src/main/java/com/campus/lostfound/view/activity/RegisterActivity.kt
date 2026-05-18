@@ -22,6 +22,7 @@ import java.io.FileOutputStream
 /**
  * 注册页面
  * 处理用户注册逻辑，支持用户名、昵称、学号、校区和头像的设置
+ * 使用 Firebase 进行用户注册
  */
 class RegisterActivity : BaseActivity() {
 
@@ -98,7 +99,7 @@ class RegisterActivity : BaseActivity() {
 
     /**
      * 执行注册操作
-     * 验证所有输入字段，调用UserManager完成注册
+     * 验证所有输入字段，调用UserManager完成Firebase注册
      */
     private fun performRegister() {
         // 获取用户输入
@@ -130,26 +131,19 @@ class RegisterActivity : BaseActivity() {
         // 显示加载状态
         showLoading(true)
 
-        // 模拟异步注册操作（延迟300ms）
-        binding.root.postDelayed({
-            try {
-                // 调用UserManager进行注册
-                if (userManager.register(username, password, nickname, studentId, campus, avatarPath)) {
-                    // 注册成功，显示提示并跳转到登录页面
-                    Toast.makeText(this, getString(R.string.register_success), Toast.LENGTH_SHORT).show()
-                    startActivity(Intent(this, LoginActivity::class.java))
-                    finish()
-                } else {
-                    // 注册失败（用户名已存在）
-                    showError(getString(R.string.register_fail))
-                    showLoading(false)
-                }
-            } catch (e: Exception) {
-                // 处理异常情况
-                showError(getString(R.string.register_fail))
+        // 使用 Firebase 异步注册
+        userManager.register(username, password, nickname, studentId, campus, avatarPath) { success, message ->
+            if (success) {
+                // 注册成功，显示提示并跳转到登录页面
+                Toast.makeText(this, getString(R.string.register_success), Toast.LENGTH_SHORT).show()
+                startActivity(Intent(this, LoginActivity::class.java))
+                finish()
+            } else {
+                // 注册失败，显示错误信息
+                showError(message ?: getString(R.string.register_fail))
                 showLoading(false)
             }
-        }, 300)
+        }
     }
 
     /**

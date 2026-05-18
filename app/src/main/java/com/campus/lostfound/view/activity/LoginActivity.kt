@@ -11,6 +11,7 @@ import com.campus.lostfound.sharedpref.UserManager
 /**
  * 登录页面
  * 处理用户登录逻辑，包括用户名密码验证和自动登录检查
+ * 使用 Firebase 进行用户认证
  */
 class LoginActivity : BaseActivity() {
 
@@ -45,7 +46,7 @@ class LoginActivity : BaseActivity() {
 
     /**
      * 执行登录操作
-     * 验证用户名和密码，调用UserManager进行登录验证
+     * 验证用户名和密码，调用UserManager进行Firebase登录验证
      */
     private fun performLogin() {
         // 获取用户名和密码输入
@@ -61,26 +62,19 @@ class LoginActivity : BaseActivity() {
         // 显示加载状态
         showLoading(true)
 
-        // 模拟异步登录操作（延迟300ms）
-        binding.root.postDelayed({
-            try {
-                // 调用UserManager进行登录验证
-                if (userManager.login(username, password)) {
-                    // 登录成功，显示提示并跳转到主页面
-                    Toast.makeText(this, getString(R.string.login_success), Toast.LENGTH_SHORT).show()
-                    startActivity(Intent(this, MainActivity::class.java))
-                    finish()
-                } else {
-                    // 登录失败，显示错误信息
-                    showError(getString(R.string.login_fail))
-                    showLoading(false)
-                }
-            } catch (e: Exception) {
-                // 处理异常情况
+        // 使用 Firebase 异步登录
+        userManager.login(username, password) { success ->
+            if (success) {
+                // 登录成功，显示提示并跳转到主页面
+                Toast.makeText(this, getString(R.string.login_success), Toast.LENGTH_SHORT).show()
+                startActivity(Intent(this, MainActivity::class.java))
+                finish()
+            } else {
+                // 登录失败，显示错误信息
                 showError(getString(R.string.login_fail))
                 showLoading(false)
             }
-        }, 300)
+        }
     }
 
     /**

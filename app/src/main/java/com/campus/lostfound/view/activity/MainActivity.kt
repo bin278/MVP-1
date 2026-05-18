@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.Log
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -18,17 +19,20 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.widget.ViewPager2
 import com.campus.lostfound.R
 import com.campus.lostfound.constant.Constants
-import com.campus.lostfound.db.ItemDao
-import com.campus.lostfound.model.Item
+import com.campus.lostfound.firebase.FirebaseHelper
+import com.campus.lostfound.firebase.Item
 import com.campus.lostfound.sharedpref.UserManager
-import com.campus.lostfound.util.TimeUtil
-import com.campus.lostfound.view.adapter.PostAdapter
+import com.campus.lostfound.view.adapter.FirebasePostAdapter
+import com.google.firebase.FirebaseApp
 
 /**
- * 主页面（首页）
+ * 主页面（首页）- Firebase版本
  * 包含搜索、校区选择、轮播图、分类标签、物品列表和底部导航
  */
 class MainActivity : BaseActivity() {
+
+    // 日志标签
+    private val TAG = "MainActivity"
 
     // 视图引用
     private lateinit var etSearch: EditText
@@ -48,10 +52,12 @@ class MainActivity : BaseActivity() {
     private lateinit var ivMine: ImageView
     private lateinit var tvMine: TextView
     
-    // 数据访问对象
-    private lateinit var itemDao: ItemDao
+    // 数据访问对象（使用 Firebase）
     private lateinit var userManager: UserManager
-    private lateinit var adapter: PostAdapter
+    private lateinit var adapter: FirebasePostAdapter
+    
+    // 广播接收器，用于接收物品更新通知
+    private lateinit var itemUpdateReceiver: android.content.BroadcastReceiver
 
     // 筛选条件
     private var currentSearchQuery = ""
@@ -71,17 +77,20 @@ class MainActivity : BaseActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        // 检查 Firebase 初始化
+        checkFirebaseInit()
+
         // 初始化数据访问对象
-        itemDao = ItemDao(this)
         userManager = UserManager(this)
 
-        // 如果未登录，自动创建测试用户
+        // 如果未登录，自动创建测试用户（使用 Firebase）
         if (!userManager.isLoggedIn()) {
-            userManager.register("测试用户", "123456", "小明", "20240001", "文昌校区")
-            userManager.login("测试用户", "123456")
+            userManager.register("测试用户", "123456", "小明", "20240001", "文昌校区") { success, _ ->
+                if (success) {
+                    userManager.login("测试用户", "123456") { }
+                }
+            }
         }
-        // 添加测试数据（首次安装时）
-        addTestData()
 
         // 绑定视图引用
         etSearch = findViewById(R.id.etSearch)
@@ -106,12 +115,31 @@ class MainActivity : BaseActivity() {
         setupSearch()
         setupBanner()
         setupCategoryTabs()
+        
+        // 初始化广播接收器
+        setupItemUpdateReceiver()
         setupRecyclerView()
         setupBottomBar()
         setupAiEntry()
 
-        // 加载数据
+        // 加载数据（从 Firebase）
         loadData()
+    }
+
+    /**
+     * 检查 Firebase 是否初始化成功
+     */
+    private fun checkFirebaseInit() {
+        try {
+            val apps = FirebaseApp.getApps(this)
+            if (apps.isNotEmpty()) {
+                Log.d(TAG, "✅ Firebase 初始化成功")
+            } else {
+                Log.e(TAG, "❌ Firebase 未初始化")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Firebase 初始化异常: ${e.message}")
+        }
     }
 
     /**
@@ -227,247 +255,201 @@ class MainActivity : BaseActivity() {
      */
     private fun setupCategoryTabs() {
         layoutCategoryTabs.removeAllViews()
-        for ((index, category) in categories.withIndex()) {
-            // 创建标签容器
-            val wrapper = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f)
-                gravity = Gravity.CENTER
-            }
-            // 创建标签文字
+        categories.forEachIndexed { index, category ->
             val tv = TextView(this).apply {
                 text = category
                 textSize = 14f
-                gravity = Gravity.CENTER
-                setPadding(4, 10, 4, 6)
-                // 设置选中/未选中状态
-                if (index == selectedTabIndex) {
-                    setTextColor(getColor(R.color.primary))
-                    paintFlags = paintFlags or android.graphics.Paint.FAKE_BOLD_TEXT_FLAG
-                } else {
-                    setTextColor(getColor(R.color.text_secondary))
+                setPadding(24, 12, 24, 12)
+                setTextColor(if (index == selectedTabIndex) getColor(R.color.primary) else getColor(R.color.text_secondary))
+                setBackgroundResource(if (index == selectedTabIndex) R.drawable.bg_campus_tag else android.R.color.transparent)
+                setOnClickListener {
+                    selectedTabIndex = index
+                    selectedCategory = if (index == 0) null else categoryMap[category]
+                    setupCategoryTabs()
+                    loadData()
                 }
             }
-            // 创建底部下划线
-            val underline = View(this).apply {
-                layoutParams = LinearLayout.LayoutParams(24, 3).apply { gravity = Gravity.CENTER_HORIZONTAL }
-                setBackgroundColor(if (index == selectedTabIndex) getColor(R.color.primary) else Color.TRANSPARENT)
-            }
-            // 组装标签
-            wrapper.addView(tv)
-            wrapper.addView(underline)
-            // 设置点击事件
-            wrapper.setOnClickListener {
-                selectedTabIndex = index
-                selectedCategory = if (index == 0) null else categoryMap[category]
-                setupCategoryTabs()
-                loadData()
-            }
-            layoutCategoryTabs.addView(wrapper)
+            layoutCategoryTabs.addView(tv)
         }
     }
 
     /**
-     * 设置物品列表RecyclerView
+     * 设置 RecyclerView
      */
     private fun setupRecyclerView() {
-        adapter = PostAdapter({ item ->
+        adapter = FirebasePostAdapter({ item ->
             // 点击跳转到详情页
-            startActivity(Intent(this, DetailActivity::class.java).putExtra("item_id", item.id))
+            val intent = Intent(this, DetailActivity::class.java)
+            intent.putExtra("itemId", item.id)
+            intent.putExtra("itemType", item.type)
+            startActivity(intent)
         }, userManager)
+
+        // 设置长按删除事件
+        adapter.setOnItemLongClickListener { item ->
+            // 判断是否是当前用户发布的物品
+            val currentUserId = userManager.getUserId()
+            if (item.publisherId == currentUserId) {
+                showDeleteConfirmDialog(item)
+            }
+        }
+
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
     }
 
     /**
+     * 显示删除确认对话框
+     */
+    private fun showDeleteConfirmDialog(item: Item) {
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("确认删除")
+            .setMessage("确定要删除这条发布吗？")
+            .setPositiveButton("删除") { _, _ ->
+                // 从 Firebase 删除
+                FirebaseHelper.deleteItem(item.id ?: "") { success ->
+                    if (success) {
+                        showToast("删除成功")
+                        loadData()
+                    } else {
+                        showToast("删除失败")
+                    }
+                }
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    /**
+     * 加载数据（从 Firebase）
+     */
+    private fun loadData() {
+        Log.d(TAG, "开始从 Firebase 加载数据")
+        
+        // 检查用户是否已登录
+        if (!userManager.isLoggedIn()) {
+            Log.e(TAG, "用户未登录，无法加载数据")
+            tvEmpty.text = "请先登录"
+            tvEmpty.visibility = View.VISIBLE
+            recyclerView.visibility = View.GONE
+            return
+        }
+        
+        // 如果有搜索关键词，使用搜索功能
+        if (currentSearchQuery.isNotEmpty()) {
+            FirebaseHelper.searchItems(currentSearchQuery) { items ->
+                Log.d(TAG, "搜索结果: ${items.size} 条")
+                updateRecyclerView(items)
+            }
+        } else {
+            // 获取所有物品，然后根据分类筛选
+            FirebaseHelper.getAllItems(null) { allItems ->
+                Log.d(TAG, "从 Firebase 获取到 ${allItems.size} 条数据")
+                // 根据分类筛选
+                val filteredItems = if (selectedCategory != null) {
+                    val filtered = allItems.filter { it.category == selectedCategory }
+                    Log.d(TAG, "分类筛选后: ${filtered.size} 条")
+                    filtered
+                } else {
+                    allItems
+                }
+                updateRecyclerView(filteredItems)
+            }
+        }
+    }
+
+    /**
+     * 更新 RecyclerView 显示
+     */
+    private fun updateRecyclerView(items: List<Item>) {
+        if (items.isEmpty()) {
+            recyclerView.visibility = View.GONE
+            tvEmpty.visibility = View.VISIBLE
+            tvEmpty.text = if (currentSearchQuery.isNotEmpty()) {
+                "没有找到相关物品\n试试其他关键词吧~"
+            } else {
+                "暂无失物招领信息\n点击下方按钮发布第一条信息吧！"
+            }
+        } else {
+            recyclerView.visibility = View.VISIBLE
+            tvEmpty.visibility = View.GONE
+            adapter.setItems(items)
+        }
+    }
+
+    /**
      * 设置底部导航栏
-     * 通过显示/隐藏 contentHome 和 fragmentProfile 实现页内切换
      */
     private fun setupBottomBar() {
-        val tabHome = findViewById<LinearLayout>(R.id.tabHome)
-        val tabMine = findViewById<LinearLayout>(R.id.tabMine)
-
-        // 默认首页高亮
-        highlightTab(true)
-
-        // 首页点击事件
-        tabHome.setOnClickListener {
-            layoutTopBar.visibility = View.VISIBLE
-            layoutTopBar.setBackgroundColor(getColor(android.R.color.white))
-            // 显示顶部栏所有子视图
-            val bar = layoutTopBar as LinearLayout
-            for (i in 0 until bar.childCount) { 
-                bar.getChildAt(i).visibility = View.VISIBLE 
-            }
+        // 首页按钮
+        val homeLayout = findViewById<LinearLayout>(R.id.tabHome)
+        homeLayout.setOnClickListener {
             contentHome.visibility = View.VISIBLE
             fragmentProfile.visibility = View.GONE
-            highlightTab(true)
+            ivHome.setImageResource(R.drawable.ic_home_selected)
+            tvHome.setTextColor(getColor(R.color.primary))
+            ivMine.setImageResource(R.drawable.ic_mine_normal)
+            tvMine.setTextColor(getColor(R.color.text_secondary))
         }
 
-        // "我的"页点击事件
-        tabMine.setOnClickListener {
-            layoutTopBar.visibility = View.GONE
-            // 隐藏子view避免残留
-            val bar = layoutTopBar as LinearLayout
-            for (i in 0 until bar.childCount) { 
-                bar.getChildAt(i).visibility = View.INVISIBLE 
-            }
+        // 我的按钮
+        val mineLayout = findViewById<LinearLayout>(R.id.tabMine)
+        mineLayout.setOnClickListener {
             contentHome.visibility = View.GONE
             fragmentProfile.visibility = View.VISIBLE
-            highlightTab(false)
+            ivHome.setImageResource(R.drawable.ic_home_normal)
+            tvHome.setTextColor(getColor(R.color.text_secondary))
+            ivMine.setImageResource(R.drawable.ic_mine_selected)
+            tvMine.setTextColor(getColor(R.color.primary))
         }
 
-        // 发布按钮点击事件
+        // 发布按钮
         fabPublish.setOnClickListener {
             startActivity(Intent(this, PublishActivity::class.java))
         }
     }
 
     /**
-     * 高亮底部导航标签
-     * @param isHome 是否高亮首页标签
-     */
-    private fun highlightTab(isHome: Boolean) {
-        val primary = getColor(R.color.primary)
-        val secondary = getColor(R.color.text_secondary)
-        if (isHome) {
-            ivHome.setColorFilter(primary)
-            tvHome.setTextColor(primary)
-            ivMine.setColorFilter(secondary)
-            tvMine.setTextColor(secondary)
-        } else {
-            ivMine.setColorFilter(primary)
-            tvMine.setTextColor(primary)
-            ivHome.setColorFilter(secondary)
-            tvHome.setTextColor(secondary)
-        }
-    }
-
-    /**
-     * 设置AI智能匹配入口
+     * 设置 AI 智能匹配入口
      */
     private fun setupAiEntry() {
-        tvAiMatch.setOnClickListener { 
-            startActivity(Intent(this, ChatActivity::class.java)) 
+        tvAiMatch.setOnClickListener {
+            startActivity(Intent(this, ChatActivity::class.java))
         }
     }
 
     /**
-     * 加载并筛选物品数据
+     * 设置物品更新广播接收器
      */
-    private fun loadData() {
-        val allItems = itemDao.queryAll()
-        // 根据搜索关键词、分类、校区筛选
-        val filtered = allItems.filter { item ->
-            // 搜索匹配
-            val matchesSearch = currentSearchQuery.isEmpty() ||
-                item.name.contains(currentSearchQuery, ignoreCase = true) ||
-                item.description.contains(currentSearchQuery, ignoreCase = true) ||
-                item.addressText.contains(currentSearchQuery, ignoreCase = true)
-            // 分类匹配
-            val matchesCategory = selectedCategory == null || item.category == selectedCategory
-            // 校区匹配
-            val matchesCampus = selectedCampus == "全部校区" ||
-                userManager.getUserInfo(item.publisher).campus == selectedCampus
-            
-            matchesSearch && matchesCategory && matchesCampus
+    private fun setupItemUpdateReceiver() {
+        itemUpdateReceiver = object : android.content.BroadcastReceiver() {
+            override fun onReceive(context: android.content.Context?, intent: android.content.Intent?) {
+                Log.d(TAG, "收到物品更新广播，开始刷新数据")
+                // 延迟500ms刷新，给Firebase数据同步时间
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    loadData()
+                }, 500)
+            }
         }
-        // 更新列表数据
-        adapter.setItems(filtered)
-        // 显示/隐藏空状态提示
-        tvEmpty.visibility = if (filtered.isEmpty()) View.VISIBLE else View.GONE
+        
+        // 注册广播接收器（Android 12+ 需要指定导出标志）
+        val filter = android.content.IntentFilter("com.campus.lostfound.ACTION_ITEM_UPDATED")
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(itemUpdateReceiver, filter, android.content.Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(itemUpdateReceiver, filter)
+        }
     }
 
-    /**
-     * 页面恢复时重新加载数据
-     */
     override fun onResume() {
         super.onResume()
-        if (::adapter.isInitialized) loadData()
+        // 返回页面时刷新数据
+        loadData()
     }
 
-    /**
-     * 添加测试数据（首次安装时执行）
-     */
-    private fun addTestData() {
-        // 如果已有数据则跳过
-        if (itemDao.queryAll().isNotEmpty()) return
-        
-        val now = System.currentTimeMillis()
-        // 创建测试物品列表
-        listOf(
-            Item(
-                type = Constants.ITEM_TYPE_LOST, 
-                name = "黑色钱包", 
-                category = "钥匙钱包", 
-                location = "图书馆二楼", 
-                time = "2026-05-10", 
-                contact = "13800138001", 
-                description = "黑色皮质钱包，内有身份证和银行卡", 
-                publisher = "测试用户", 
-                publishTime = TimeUtil.formatTimestamp(now - 3600_000), 
-                addressText = "图书馆二楼自习区"
-            ),
-            Item(
-                type = Constants.ITEM_TYPE_FOUND, 
-                name = "学生证", 
-                category = "证件卡片", 
-                location = "操场看台", 
-                time = "2026-05-10", 
-                contact = "13900139001", 
-                description = "计算机学院 李明同学的学生证", 
-                publisher = "测试用户", 
-                publishTime = TimeUtil.formatTimestamp(now - 1800_000), 
-                addressText = "操场看台"
-            ),
-            Item(
-                type = Constants.ITEM_TYPE_LOST, 
-                name = "蓝牙耳机", 
-                category = "电子产品", 
-                location = "教学楼A座", 
-                time = "2026-05-11", 
-                contact = "13800138002", 
-                description = "白色AirPods Pro，带蓝色保护壳", 
-                publisher = "测试用户", 
-                publishTime = TimeUtil.formatTimestamp(now - 7200_000), 
-                addressText = "教学楼A座301"
-            ),
-            Item(
-                type = Constants.ITEM_TYPE_FOUND, 
-                name = "高等数学课本", 
-                category = "书籍文具", 
-                location = "自习室", 
-                time = "2026-05-11", 
-                contact = "13900139002", 
-                description = "同济版高等数学上册，书内有详细笔记", 
-                publisher = "测试用户", 
-                publishTime = TimeUtil.formatTimestamp(now - 5400_000), 
-                addressText = "第一自习室"
-            ),
-            Item(
-                type = Constants.ITEM_TYPE_LOST, 
-                name = "校园卡", 
-                category = "证件卡片", 
-                location = "食堂一楼", 
-                time = "2026-05-12", 
-                contact = "13800138003", 
-                description = "校园一卡通，卡号后四位8832", 
-                publisher = "测试用户", 
-                publishTime = TimeUtil.formatTimestamp(now - 10800_000), 
-                addressText = "第一食堂"
-            ),
-            Item(
-                type = Constants.ITEM_TYPE_FOUND, 
-                name = "运动水杯", 
-                category = "生活用品", 
-                location = "体育馆", 
-                time = "2026-05-12", 
-                contact = "13900139003", 
-                description = "绿色运动水杯，品牌李宁，在体育馆更衣室捡到", 
-                publisher = "测试用户", 
-                publishTime = TimeUtil.formatTimestamp(now - 9000_000), 
-                addressText = "体育馆更衣室"
-            )
-        ).forEach { itemDao.insert(it) }
+    override fun onDestroy() {
+        super.onDestroy()
+        // 注销广播接收器
+        unregisterReceiver(itemUpdateReceiver)
     }
 }

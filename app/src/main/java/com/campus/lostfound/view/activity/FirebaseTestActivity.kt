@@ -94,7 +94,7 @@ class FirebaseTestActivity : AppCompatActivity() {
             name = "测试物品",
             description = "这是一个测试物品",
             location = "测试地点",
-            contact = "13800138000",
+            phone = "13800138000",
             publisherId = "test_user",
             publisherName = "测试用户"
         )

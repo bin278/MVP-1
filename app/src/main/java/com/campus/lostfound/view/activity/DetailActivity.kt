@@ -4,34 +4,32 @@ import android.content.Intent
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
-import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.campus.lostfound.R
 import com.campus.lostfound.constant.Constants
-import com.campus.lostfound.db.FavoriteDao
-import com.campus.lostfound.db.ItemDao
-import com.campus.lostfound.model.Item
+import com.campus.lostfound.firebase.FirebaseHelper
+import com.campus.lostfound.firebase.Item
 import com.campus.lostfound.sharedpref.UserManager
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import java.io.File
 
 /**
- * 物品详情页面
+ * 物品详情页面 - Firebase版本
  * 展示物品图片轮播、基本信息、联系方式、地图导航、收藏和分享功能
  */
 class DetailActivity : BaseActivity() {
 
-    // 物品数据访问对象
-    private lateinit var itemDao: ItemDao
-    // 收藏数据访问对象
-    private lateinit var favoriteDao: FavoriteDao
+    // 日志标签
+    private val TAG = "DetailActivity"
+
     // 用户管理器
     private lateinit var userManager: UserManager
     // 当前物品对象
@@ -44,26 +42,36 @@ class DetailActivity : BaseActivity() {
         setContentView(R.layout.activity_detail)
 
         // 初始化数据访问对象
-        itemDao = ItemDao(this)
-        favoriteDao = FavoriteDao(this)
         userManager = UserManager(this)
 
-        // 获取传入的物品ID
-        val itemId = intent.getLongExtra("item_id", -1)
+        // 获取传入的物品ID（从 Firebase 传入的是字符串ID）
+        val itemId = intent.getStringExtra("itemId")
+        val itemType = intent.getStringExtra("itemType")
+
+        Log.d(TAG, "接收到物品ID: $itemId, 类型: $itemType")
+
         // 验证物品ID有效性
-        if (itemId <= 0) { finish(); return }
+        if (itemId.isNullOrEmpty()) {
+            showToast("物品ID无效")
+            finish()
+            return
+        }
 
-        // 根据ID查询物品详情
-        item = itemDao.queryById(itemId)
-        // 验证物品存在性
-        if (item == null) { finish(); return }
-
-        // 初始化各功能模块
-        displayItem(item!!)
-        setupFavoriteButton(itemId)
-        setupMapSection(item!!)
-        setupShareButton(item!!)
-        setupDialButton(item!!)
+        // 根据ID从 Firebase 查询物品详情
+        FirebaseHelper.getItemById(itemId) { firebaseItem ->
+            if (firebaseItem == null) {
+                showToast("物品不存在")
+                finish()
+                return@getItemById
+            }
+            item = firebaseItem
+            // 初始化各功能模块
+            displayItem(firebaseItem)
+            setupFavoriteButton(firebaseItem)
+            setupMapSection(firebaseItem)
+            setupShareButton(firebaseItem)
+            setupDialButton(firebaseItem)
+        }
     }
 
     /**
@@ -78,273 +86,93 @@ class DetailActivity : BaseActivity() {
         val tvName = findViewById<TextView>(R.id.tvDetailName)
         val tvCategory = findViewById<TextView>(R.id.tvDetailCategory)
         val tvLocation = findViewById<TextView>(R.id.tvDetailLocation)
-        val tvAddress = findViewById<TextView>(R.id.tvDetailAddress)
         val tvTime = findViewById<TextView>(R.id.tvDetailTime)
+        val tvDescription = findViewById<TextView>(R.id.tvDetailDescription)
         val tvContact = findViewById<TextView>(R.id.tvDetailContact)
         val tvPublisher = findViewById<TextView>(R.id.tvDetailPublisher)
-        val tvDescription = findViewById<TextView>(R.id.tvDetailDescription)
 
-        // 设置物品基本信息
-        tvName.text = item.name
-        tvCategory.text = item.category.ifEmpty { "未分类" }
-        tvLocation.text = item.location.ifEmpty { "未标记地点" }
-        
-        // 设置详细地址（可选）
-        if (item.addressText.isNotEmpty()) {
-            tvAddress.text = "详细: ${item.addressText}"
-            tvAddress.visibility = View.VISIBLE
+        // 设置物品类型标签（丢失/捡到）
+        tvType.text = if (item.type == "lost") "丢失物品" else "捡到物品"
+        tvType.setBackgroundResource(if (item.type == "lost") R.drawable.bg_type_tag_lost else R.drawable.bg_type_tag_found)
+
+        // 设置物品名称
+        tvName.text = item.name ?: "未知物品"
+
+        // 设置分类标签
+        tvCategory.text = item.category ?: "其他"
+        val categoryDrawable = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = 8f
+            setColor(getColor(R.color.gray_bg))
+        }
+        tvCategory.background = categoryDrawable
+
+        // 设置地点信息
+        tvLocation.text = "${item.campus ?: ""} - ${item.location ?: ""}"
+
+        // 设置发布时间
+        tvTime.text = item.time ?: ""
+
+        // 设置物品描述
+        tvDescription.text = item.description ?: "暂无描述"
+
+        // 设置联系方式
+        tvContact.text = item.phone ?: "未提供"
+
+        // 设置发布者信息
+        tvPublisher.text = item.publisherName ?: "匿名用户"
+
+        // 设置图片轮播
+        setupImagePager(vpImages, layoutDots, item.images ?: emptyList())
+    }
+
+    /**
+     * 设置图片轮播
+     * @param vpImages ViewPager2组件
+     * @param layoutDots 指示器布局
+     * @param images 图片路径列表
+     */
+    private fun setupImagePager(vpImages: androidx.viewpager2.widget.ViewPager2, layoutDots: LinearLayout, images: List<String>) {
+        // 如果没有图片，使用默认图片
+        val imagePaths = if (images.isEmpty()) {
+            listOf("")
         } else {
-            tvAddress.visibility = View.GONE
+            images
         }
-        
-        tvTime.text = item.time.ifEmpty { "未指定时间" }
-        tvContact.text = item.contact
-        tvPublisher.text = item.publisher
-        tvDescription.text = item.description.ifEmpty { "暂无描述" }
 
-        // 设置类型标签样式：失物红色 / 招领蓝色
-        if (item.type == Constants.ITEM_TYPE_LOST) {
-            tvType.text = "失物"
-            tvType.background = GradientDrawable().apply {
-                cornerRadius = 12f; setColor(getColor(R.color.lost_tag))
+        vpImages.adapter = DetailImageAdapter(imagePaths)
+        setupImageDots(layoutDots, imagePaths.size, 0)
+
+        vpImages.registerOnPageChangeCallback(object : androidx.viewpager2.widget.ViewPager2.OnPageChangeCallback() {
+            override fun onPageSelected(position: Int) {
+                setupImageDots(layoutDots, imagePaths.size, position)
             }
-        } else {
-            tvType.text = "招领"
-            tvType.background = GradientDrawable().apply {
-                cornerRadius = 12f; setColor(getColor(R.color.found_tag))
+        })
+    }
+
+    /**
+     * 设置图片指示器圆点
+     * @param layoutDots 指示器布局
+     * @param count 圆点总数
+     * @param selected 当前选中的圆点索引
+     */
+    private fun setupImageDots(layoutDots: LinearLayout, count: Int, selected: Int) {
+        layoutDots.removeAllViews()
+        for (i in 0 until count) {
+            val dot = ImageView(this).apply {
+                setImageResource(if (i == selected) R.drawable.dot_active else R.drawable.dot_inactive)
+                layoutParams = LinearLayout.LayoutParams(10, 10).apply { setMargins(5, 0, 5, 0) }
             }
-        }
-
-        // 加载多图显示
-        val imageFiles = if (item.imagePath.isNotEmpty()) {
-            item.imagePath.split("|||").map { File(it) }.filter { it.exists() }
-        } else emptyList()
-
-        if (imageFiles.isNotEmpty()) {
-            vpImages.visibility = View.VISIBLE
-            layoutDots.visibility = View.VISIBLE
-            vpImages.adapter = DetailImageAdapter(imageFiles)
-            // 初始化指示器圆点
-            layoutDots.removeAllViews()
-            imageFiles.forEachIndexed { i, _ ->
-                val dot = ImageView(this).apply {
-                    val size = 8.dp
-                    layoutParams = LinearLayout.LayoutParams(size, size).apply { setMargins(4.dp, 0, 4.dp, 0) }
-                    setImageResource(if (i == 0) R.drawable.dot_active else R.drawable.dot_inactive)
-                }
-                layoutDots.addView(dot)
-            }
-            // 设置页面切换监听，更新指示器
-            vpImages.registerOnPageChangeCallback(object : androidx.viewpager2.widget.ViewPager2.OnPageChangeCallback() {
-                override fun onPageSelected(pos: Int) {
-                    for (j in 0 until layoutDots.childCount) {
-                        (layoutDots.getChildAt(j) as ImageView).setImageResource(
-                            if (j == pos) R.drawable.dot_active else R.drawable.dot_inactive
-                        )
-                    }
-                }
-            })
-        } else {
-            vpImages.visibility = View.GONE
-            layoutDots.visibility = View.GONE
+            layoutDots.addView(dot)
         }
     }
 
     /**
-     * 设置拨号按钮：点击后打开系统拨号界面
-     * @param item 物品对象
+     * 详情页图片适配器
      */
-    private fun setupDialButton(item: Item) {
-        val btnDial = findViewById<MaterialButton>(R.id.btnDial)
-        btnDial.setOnClickListener {
-            val phoneNumber = item.contact
-            if (phoneNumber.isNotEmpty()) {
-                // 打开系统拨号界面
-                val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phoneNumber"))
-                startActivity(intent)
-            } else {
-                Toast.makeText(this, "暂无联系方式", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
+    private inner class DetailImageAdapter(private val images: List<String>) : RecyclerView.Adapter<DetailImageAdapter.VH>() {
+        override fun getItemCount() = images.size
 
-    /**
-     * 设置收藏按钮：切换收藏状态
-     * @param itemId 物品ID
-     */
-    private fun setupFavoriteButton(itemId: Long) {
-        val btnFavorite = findViewById<MaterialButton>(R.id.btnFavorite)
-        val username = userManager.getCurrentUser()
-        // 查询当前收藏状态
-        isFavorite = favoriteDao.isFavorite(username, itemId)
-        // 更新按钮显示状态
-        updateFavoriteButton(btnFavorite)
-
-        btnFavorite.setOnClickListener {
-            if (isFavorite) {
-                // 取消收藏
-                favoriteDao.removeFavorite(username, itemId)
-                isFavorite = false
-                Toast.makeText(this, "已取消收藏", Toast.LENGTH_SHORT).show()
-            } else {
-                // 添加收藏
-                favoriteDao.addFavorite(username, itemId)
-                isFavorite = true
-                Toast.makeText(this, "已收藏", Toast.LENGTH_SHORT).show()
-            }
-            // 更新按钮显示状态
-            updateFavoriteButton(btnFavorite)
-        }
-    }
-
-    /**
-     * 更新收藏按钮文字和图标
-     * @param btnFavorite 收藏按钮
-     */
-    private fun updateFavoriteButton(btnFavorite: MaterialButton) {
-        if (isFavorite) {
-            btnFavorite.text = "取消收藏"
-            btnFavorite.setIconResource(android.R.drawable.btn_star_big_on)
-        } else {
-            btnFavorite.text = "收藏"
-            btnFavorite.setIconResource(android.R.drawable.btn_star_big_off)
-        }
-    }
-
-    /**
-     * 设置地图区域：展示静态地图和导航入口
-     * @param item 物品对象
-     */
-    private fun setupMapSection(item: Item) {
-        val cardMap = findViewById<MaterialCardView>(R.id.cardMap)
-        val ivStaticMap = findViewById<ImageView>(R.id.ivStaticMap)
-        val btnNavigate = findViewById<MaterialButton>(R.id.btnNavigate)
-        val tvMapCoords = findViewById<TextView>(R.id.tvMapCoords)
-
-        // 只有当物品有有效坐标时才显示地图区域
-        if (item.latitude != 0.0 && item.longitude != 0.0) {
-            cardMap.visibility = View.VISIBLE
-            // 显示坐标信息
-            tvMapCoords.text = "坐标: ${String.format("%.6f", item.latitude)}, ${String.format("%.6f", item.longitude)}"
-            // 加载静态地图图片
-            loadStaticMap(item.longitude, item.latitude, ivStaticMap)
-            // 设置点击事件：图片和按钮都可触发导航
-            ivStaticMap.setOnClickListener { openNavigation(item.latitude, item.longitude) }
-            btnNavigate.setOnClickListener { openNavigation(item.latitude, item.longitude) }
-        }
-    }
-
-    /**
-     * 加载静态地图（高德 API，失败回退 OpenStreetMap）
-     * @param lng 经度
-     * @param lat 纬度
-     * @param ivStaticMap 显示地图的ImageView
-     */
-    private fun loadStaticMap(lng: Double, lat: Double, ivStaticMap: ImageView) {
-        // 高德地图静态图URL
-        val amapUrl = "https://restapi.amap.com/v3/staticmap?location=$lng,$lat&zoom=15&size=400*200&markers=mid,0xFF0000,A:$lng,$lat&key=${Constants.AMAP_API_KEY}"
-        // 计算OSM瓦片坐标
-        val zoom = 15
-        val tileX = lon2tile(lng, zoom)
-        val tileY = lat2tile(lat, zoom)
-        val osmTileUrl = "https://tile.openstreetmap.org/$zoom/$tileX/$tileY.png"
-        
-        // 使用Glide加载，优先使用高德地图，失败则使用OpenStreetMap
-        Glide.with(this)
-            .load(amapUrl)
-            .error(Glide.with(this).load(osmTileUrl).error(android.R.drawable.ic_menu_mapmode))
-            .into(ivStaticMap)
-    }
-
-    /**
-     * 将经度转换为OSM瓦片X坐标
-     * @param lon 经度
-     * @param zoom 缩放级别
-     * @return 瓦片X坐标
-     */
-    private fun lon2tile(lon: Double, zoom: Int): Int = 
-        ((lon + 180) / 360 * Math.pow(2.0, zoom.toDouble())).toInt()
-
-    /**
-     * 将纬度转换为OSM瓦片Y坐标
-     * @param lat 纬度
-     * @param zoom 缩放级别
-     * @return 瓦片Y坐标
-     */
-    private fun lat2tile(lat: Double, zoom: Int): Int {
-        val latRad = Math.toRadians(lat)
-        return ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * Math.pow(2.0, zoom.toDouble())).toInt()
-    }
-
-    /**
-     * 打开地图导航：优先高德 → 百度 → 系统地图 → 复制坐标
-     * @param lat 纬度
-     * @param lng 经度
-     */
-    private fun openNavigation(lat: Double, lng: Double) {
-        val label = item?.addressText?.ifEmpty { item?.location } ?: "目标地点"
-        
-        // 优先使用高德地图
-        if (isAppInstalled("com.autonavi.minimap")) {
-            val uri = Uri.parse("androidamap://route/plan/?dlat=$lat&dlon=$lng&dname=$label&dev=0&t=0")
-            startActivity(Intent(Intent.ACTION_VIEW, uri).setPackage("com.autonavi.minimap"))
-        } else {
-            try {
-                // 尝试百度地图
-                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("baidumap://map/direction?destination=latlng:$lat,$lng|name=$label&mode=driving")))
-            } catch (e: Exception) {
-                try {
-                    // 尝试系统地图
-                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("geo:$lat,$lng?q=$lat,$lng($label)")))
-                } catch (e2: Exception) {
-                    // 最后将坐标复制到剪贴板
-                    Toast.makeText(this, "未安装地图应用", Toast.LENGTH_SHORT).show()
-                    (getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager)
-                        .setPrimaryClip(android.content.ClipData.newPlainText("坐标", "$lat,$lng"))
-                    Toast.makeText(this, "坐标已复制到剪贴板", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
-    }
-
-    /**
-     * 检查应用是否已安装
-     * @param packageName 应用包名
-     * @return 是否已安装
-     */
-    private fun isAppInstalled(packageName: String): Boolean = try {
-        packageManager.getApplicationInfo(packageName, 0); true
-    } catch (e: Exception) { false }
-
-    /**
-     * 设置分享按钮：通过系统分享菜单发送物品信息
-     * @param item 物品对象
-     */
-    private fun setupShareButton(item: Item) {
-        findViewById<MaterialButton>(R.id.btnShare).setOnClickListener {
-            // 构建分享文本
-            val text = "【${if (item.type == "lost") "失物" else "招领"}】${item.name}\n" +
-                "地点: ${item.addressText.ifEmpty { item.location }}\n" +
-                "联系方式: ${item.contact}\n" +
-                "描述: ${item.description}"
-            // 创建分享意图
-            val intent = Intent(Intent.ACTION_SEND).apply { 
-                type = "text/plain"
-                putExtra(Intent.EXTRA_TEXT, text) 
-            }
-            startActivity(Intent.createChooser(intent, "分享"))
-        }
-    }
-
-    /**
-     * 物品图片 ViewPager 适配器
-     * 负责显示物品的多张图片
-     */
-    private inner class DetailImageAdapter(private val files: List<File>) :
-        RecyclerView.Adapter<DetailImageAdapter.VH>() {
-        
-        override fun getItemCount() = files.size
-        
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
             val iv = ImageView(parent.context).apply {
                 layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
@@ -352,16 +180,183 @@ class DetailActivity : BaseActivity() {
             }
             return VH(iv)
         }
-        
-        override fun onBindViewHolder(holder: VH, pos: Int) {
-            Glide.with(this@DetailActivity).load(files[pos]).centerCrop().into(holder.iv)
+
+        override fun onBindViewHolder(holder: VH, position: Int) {
+            holder.bind(images[position])
         }
-        
-        inner class VH(val iv: ImageView) : RecyclerView.ViewHolder(iv)
+
+        inner class VH(private val iv: ImageView) : RecyclerView.ViewHolder(iv) {
+            fun bind(imagePath: String) {
+                if (imagePath.isEmpty()) {
+                    // 没有图片时显示默认图片
+                    iv.setImageResource(R.drawable.ic_launcher_foreground)
+                } else if (imagePath.startsWith("http")) {
+                    // 网络图片
+                    Glide.with(iv.context).load(imagePath).into(iv)
+                } else {
+                    // 本地图片
+                    val file = File(imagePath)
+                    if (file.exists()) {
+                        Glide.with(iv.context).load(file).into(iv)
+                    } else {
+                        iv.setImageResource(R.drawable.ic_launcher_foreground)
+                    }
+                }
+            }
+        }
     }
 
     /**
-     * Int扩展函数：将dp值转换为像素值
+     * 设置收藏按钮
      */
-    private val Int.dp: Int get() = (this * resources.displayMetrics.density).toInt()
+    private fun setupFavoriteButton(item: Item) {
+        val btnFavorite = findViewById<MaterialButton>(R.id.btnFavorite)
+
+        // 检查是否已收藏
+        FirebaseHelper.isFavorite(item.id ?: "", userManager.getUserId()) { isFav ->
+            isFavorite = isFav
+            updateFavoriteButton(btnFavorite, isFavorite)
+        }
+
+        btnFavorite.setOnClickListener {
+            isFavorite = !isFavorite
+            updateFavoriteButton(btnFavorite, isFavorite)
+
+            if (isFavorite) {
+                FirebaseHelper.addFavorite(item.id ?: "", userManager.getUserId()) { success ->
+                    if (!success) {
+                        showToast("收藏失败")
+                        isFavorite = false
+                        updateFavoriteButton(btnFavorite, isFavorite)
+                    }
+                }
+            } else {
+                FirebaseHelper.removeFavorite(item.id ?: "", userManager.getUserId()) { success ->
+                    if (!success) {
+                        showToast("取消收藏失败")
+                        isFavorite = true
+                        updateFavoriteButton(btnFavorite, isFavorite)
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 更新收藏按钮状态
+     */
+    private fun updateFavoriteButton(btn: MaterialButton, isFav: Boolean) {
+        if (isFav) {
+            btn.setBackgroundColor(getColor(R.color.red))
+            btn.setIconResource(android.R.drawable.btn_star_big_on)
+            btn.setTextColor(getColor(R.color.white))
+        } else {
+            btn.setBackgroundColor(getColor(R.color.gray_bg))
+            btn.setIconResource(android.R.drawable.btn_star_big_off)
+            btn.setTextColor(getColor(R.color.text_primary))
+        }
+    }
+
+    /**
+     * 设置地图区域
+     */
+    private fun setupMapSection(item: Item) {
+        val cardMap = findViewById<MaterialCardView>(R.id.cardMap)
+        val tvMapCoords = findViewById<TextView>(R.id.tvMapCoords)
+        val btnNavigate = findViewById<MaterialButton>(R.id.btnNavigate)
+
+        if (item.latitude != null && item.longitude != null) {
+            cardMap.visibility = View.VISIBLE
+            tvMapCoords.text = "坐标: ${item.latitude}, ${item.longitude}"
+
+            // 设置导航按钮点击事件
+            btnNavigate.setOnClickListener {
+                navigateToLocation(item.latitude!!, item.longitude!!, item.location ?: "位置")
+            }
+        } else {
+            cardMap.visibility = View.GONE
+        }
+    }
+
+    /**
+     * 跳转到地图应用导航
+     * @param latitude 纬度
+     * @param longitude 经度
+     * @param locationName 位置名称
+     */
+    private fun navigateToLocation(latitude: Double, longitude: Double, locationName: String) {
+        // 尝试使用高德地图导航
+        val amapUri = Uri.parse("amapuri://route/plan?sid=BGVISUAL&dlat=$latitude&dlon=$longitude&dname=$locationName&dev=0&t=0")
+        val amapIntent = Intent(Intent.ACTION_VIEW, amapUri)
+        
+        if (amapIntent.resolveActivity(packageManager) != null) {
+            startActivity(amapIntent)
+            return
+        }
+
+        // 尝试使用百度地图导航
+        val baiduUri = Uri.parse("baidumap://map/direction?destination=latlng:$latitude,$longitude|name:$locationName&mode=driving")
+        val baiduIntent = Intent(Intent.ACTION_VIEW, baiduUri)
+        
+        if (baiduIntent.resolveActivity(packageManager) != null) {
+            startActivity(baiduIntent)
+            return
+        }
+
+        // 尝试使用腾讯地图导航
+        val tencentUri = Uri.parse("qqmap://map/routeplan?type=drive&to=$latitude,$longitude,$locationName")
+        val tencentIntent = Intent(Intent.ACTION_VIEW, tencentUri)
+        
+        if (tencentIntent.resolveActivity(packageManager) != null) {
+            startActivity(tencentIntent)
+            return
+        }
+
+        // 使用系统地图（通用方案）
+        val geoUri = Uri.parse("geo:$latitude,$longitude?q=$latitude,$longitude($locationName)")
+        val geoIntent = Intent(Intent.ACTION_VIEW, geoUri)
+        
+        if (geoIntent.resolveActivity(packageManager) != null) {
+            startActivity(geoIntent)
+        } else {
+            showToast("未找到地图应用")
+        }
+    }
+
+    /**
+     * 设置分享按钮
+     */
+    private fun setupShareButton(item: Item) {
+        val btnShare = findViewById<MaterialButton>(R.id.btnShare)
+        btnShare.setOnClickListener {
+            val shareText = """
+                ${if (item.type == "lost") "【失物招领】寻找" else "【捡到物品】"}, ${item.name ?: "物品"}
+                分类：${item.category ?: ""}
+                地点：${item.campus ?: ""} - ${item.location ?: ""}
+                描述：${item.description ?: ""}
+            """.trimIndent()
+
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_TEXT, shareText)
+            }
+            startActivity(Intent.createChooser(intent, "分享到"))
+        }
+    }
+
+    /**
+     * 设置拨号按钮
+     */
+    private fun setupDialButton(item: Item) {
+        val btnDial = findViewById<MaterialButton>(R.id.btnDial)
+        btnDial.setOnClickListener {
+            val phone = item.phone ?: ""
+            if (phone.isNotEmpty()) {
+                val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))
+                startActivity(intent)
+            } else {
+                showToast("未提供联系方式")
+            }
+        }
+    }
 }

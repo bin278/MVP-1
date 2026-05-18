@@ -1,4 +1,4 @@
-itemDao = ItemDao(this)package com.campus.lostfound.view.activity
+package com.campus.lostfound.view.activity
 
 import android.content.Intent
 import android.os.Bundle
@@ -12,6 +12,7 @@ import com.campus.lostfound.R
 import com.campus.lostfound.firebase.FirebaseHelper
 import com.campus.lostfound.firebase.Item
 import com.campus.lostfound.firebase.User
+import com.campus.lostfound.sharedpref.UserManager
 import com.campus.lostfound.view.adapter.FirebasePostAdapter
 import com.google.firebase.FirebaseApp
 
@@ -43,7 +44,7 @@ class FirebaseMainActivity : AppCompatActivity() {
         // 初始化适配器
         adapter = FirebasePostAdapter({ item ->
             Log.d(TAG, "点击物品: ${item.name}")
-        }, com.campus.lostfound.sharedpref.UserManager(this))
+        }, UserManager(this))
         
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
@@ -70,10 +71,13 @@ class FirebaseMainActivity : AppCompatActivity() {
     private fun checkFirebaseInit() {
         try {
             val apps = FirebaseApp.getApps(this)
+            Log.d(TAG, "Firebase 应用数量: ${apps.size}")
+            
             if (apps.isNotEmpty()) {
                 val app = apps[0]
                 Log.d(TAG, "✅ Firebase 初始化成功")
                 Log.d(TAG, "应用名称: ${app.name}")
+                Log.d(TAG, "应用ID: ${app.options.applicationId}")
                 tvStatus.text = "✅ Firebase 连接成功"
             } else {
                 Log.e(TAG, "❌ Firebase 未初始化")
@@ -86,79 +90,121 @@ class FirebaseMainActivity : AppCompatActivity() {
     }
 
     /**
-     * 从 Firebase 加载数据
+     * 加载数据
      */
     private fun loadData() {
-        Log.d(TAG, "开始从 Firebase 加载数据")
-        tvStatus.text = "正在加载数据..."
-
         FirebaseHelper.getAllItems(null) { items ->
             Log.d(TAG, "加载到 ${items.size} 条数据")
             adapter.setItems(items)
-            tvStatus.text = if (items.isEmpty()) {
-                "数据库为空，点击下方按钮添加测试数据"
-            } else {
-                "✅ 加载成功，共 ${items.size} 条数据"
+            
+            if (items.isEmpty()) {
+                tvStatus.text = "当前数据库为空，请添加测试数据"
             }
         }
     }
 
     /**
-     * 添加测试数据到 Firebase
+     * 添加测试数据
      */
     private fun addTestData() {
-        tvStatus.text = "正在添加测试数据..."
+        Log.d(TAG, "开始添加测试数据")
         
         // 创建测试用户
         val testUser = User(
             username = "testuser",
             password = "123456",
             nickname = "测试用户",
-            phone = "13800138000"
+            studentId = "20240001",
+            campus = "文昌校区"
         )
 
+        // 注册用户
         FirebaseHelper.register(testUser) { success, userId ->
             if (success && userId != null) {
                 Log.d(TAG, "用户注册成功: $userId")
                 
                 // 创建测试物品
-                val testItem = Item(
-                    type = "lost",
-                    name = "校园卡",
-                    description = "丢失了一张校园卡，内有身份证和银行卡",
-                    location = "图书馆二楼",
-                    contact = "13800138000",
-                    publisherId = userId,
-                    publisherName = "测试用户"
+                val testItems = listOf(
+                    Item(
+                        type = "lost",
+                        name = "iPhone 15 Pro",
+                        category = "电子产品",
+                        location = "图书馆三楼",
+                        campus = "文昌校区",
+                        time = "2024-01-15",
+                        phone = "13800138000",
+                        description = "黑色 iPhone 15 Pro，屏幕有轻微划痕",
+                        publisherId = userId,
+                        publisherName = "测试用户"
+                    ),
+                    Item(
+                        type = "found",
+                        name = "学生证",
+                        category = "钥匙钱包",
+                        location = "食堂一楼",
+                        campus = "文昌校区",
+                        time = "2024-01-14",
+                        phone = "13900139000",
+                        description = "姓名：张三，学号：20240002",
+                        publisherId = userId,
+                        publisherName = "测试用户"
+                    )
                 )
 
-                FirebaseHelper.addItem(testItem) { itemId ->
-                    if (itemId != null) {
-                        Log.d(TAG, "物品添加成功: $itemId")
-                        tvStatus.text = "✅ 测试数据添加成功！物品ID: $itemId"
-                        // 重新加载数据
-                        loadData()
-                    } else {
-                        tvStatus.text = "❌ 添加失败"
+                var addedCount = 0
+                testItems.forEach { item ->
+                    FirebaseHelper.addItem(item) { itemId ->
+                        if (itemId != null) {
+                            Log.d(TAG, "物品添加成功: $itemId")
+                            addedCount++
+                            if (addedCount == testItems.size) {
+                                Log.d(TAG, "✅ 测试数据添加成功！")
+                                tvStatus.text = "✅ 测试数据添加成功！"
+                                loadData()
+                            }
+                        } else {
+                            Log.e(TAG, "物品添加失败")
+                        }
                     }
                 }
             } else {
-                // 用户已存在，直接添加物品
-                Log.d(TAG, "用户可能已存在，直接添加物品")
-                val testItem = Item(
-                    type = "found",
-                    name = "学生证",
-                    description = "在操场捡到的学生证",
-                    location = "操场看台",
-                    contact = "13900139000",
-                    publisherId = "test_user_id",
-                    publisherName = "测试用户"
-                )
-                FirebaseHelper.addItem(testItem) { itemId ->
-                    if (itemId != null) {
-                        tvStatus.text = "✅ 测试数据添加成功！物品ID: $itemId"
-                        loadData()
+                Log.e(TAG, "用户注册失败")
+                tvStatus.text = "用户注册失败，可能已存在"
+                // 用户可能已存在，直接添加物品
+                FirebaseHelper.login("testuser", "123456") { user ->
+                    if (user != null) {
+                        addTestItems(user.id ?: "")
                     }
+                }
+            }
+        }
+    }
+
+    /**
+     * 添加测试物品（用户已存在时）
+     */
+    private fun addTestItems(userId: String) {
+        val testItems = listOf(
+            Item(
+                type = "lost",
+                name = "蓝牙耳机",
+                category = "电子产品",
+                location = "教学楼A栋",
+                campus = "文昌校区",
+                time = "2024-01-16",
+                phone = "13800138000",
+                description = "白色 AirPods Pro",
+                publisherId = userId,
+                publisherName = "测试用户"
+            )
+        )
+
+        testItems.forEach { item ->
+            FirebaseHelper.addItem(item) { itemId ->
+                if (itemId != null) {
+                    Log.d(TAG, "物品添加成功: $itemId")
+                    tvStatus.text = "✅ 测试数据添加成功！"
+                    loadData()
                 }
             }
         }

@@ -13,6 +13,7 @@ import android.location.LocationManager
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
+import android.util.Log
 import android.view.Gravity
 import android.view.View
 import android.widget.ArrayAdapter
@@ -30,10 +31,9 @@ import com.bumptech.glide.load.resource.bitmap.RoundedCorners
 import com.campus.lostfound.R
 import com.campus.lostfound.ai.AiHelper
 import com.campus.lostfound.constant.Constants
-import com.campus.lostfound.db.ItemDao
-import com.campus.lostfound.model.Item
+import com.campus.lostfound.firebase.FirebaseHelper
+import com.campus.lostfound.firebase.Item
 import com.campus.lostfound.sharedpref.UserManager
-import com.campus.lostfound.util.TimeUtil
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.imageview.ShapeableImageView
 import com.google.android.material.textfield.TextInputEditText
@@ -43,7 +43,7 @@ import java.util.Calendar
 import java.util.Locale
 
 /**
- * 发布/编辑物品页面
+ * 发布/编辑物品页面 - Firebase版本
  * 支持发布失物/招领信息，上传多张图片、选择地点、GPS定位、AI分类等
  */
 class PublishActivity : BaseActivity() {
@@ -51,12 +51,12 @@ class PublishActivity : BaseActivity() {
     companion object {
         private const val LOCATION_PERMISSION_REQUEST = 1002
         private const val CAMERA_PERMISSION_REQUEST = 1003
-        private const val IMAGE_SEPARATOR = "|||"
         private const val MAX_IMAGE_COUNT = 9
     }
 
+    private val TAG = "PublishActivity"
+
     private lateinit var userManager: UserManager
-    private lateinit var itemDao: ItemDao
     private lateinit var aiHelper: AiHelper
     private lateinit var locationManager: LocationManager
 
@@ -80,7 +80,7 @@ class PublishActivity : BaseActivity() {
     private var selectedLatitude = 0.0
     private var selectedLongitude = 0.0
     private var selectedAddressText = ""
-    private var editItemId = -1L
+    private var editItemId: String? = null  // Firebase使用字符串ID
     private var isLocating = false
 
     private var cameraImageUri: Uri? = null
@@ -132,7 +132,6 @@ class PublishActivity : BaseActivity() {
         toolbar.setNavigationOnClickListener { finish() }
 
         userManager = UserManager(this)
-        itemDao = ItemDao(this)
         aiHelper = AiHelper()
         locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
 
@@ -224,35 +223,31 @@ class PublishActivity : BaseActivity() {
     }
 
     private fun checkEditMode() {
-        editItemId = intent.getLongExtra("item_id", -1)
-        if (editItemId > 0) {
-            val item = itemDao.queryById(editItemId) ?: return
-            etName.setText(item.name)
-            actvCategory.setText(item.category, false)
-            etLocation.setText(item.location)
-            etTime.setText(item.time)
-            etContact.setText(item.contact)
-            etDescription.setText(item.description)
-            currentItemType = item.type
-            updateTypeButtonStyles()
-            selectedLatitude = item.latitude
-            selectedLongitude = item.longitude
-            selectedAddressText = item.addressText
-            if (selectedAddressText.isNotEmpty()) {
-                tvAddressInfo.text = "经度: $selectedLongitude, 纬度: $selectedLatitude"
-                tvAddressInfo.visibility = View.VISIBLE
-            }
-            // 解析已有图片路径
-            if (item.imagePath.isNotEmpty()) {
-                item.imagePath.split(IMAGE_SEPARATOR).forEach { path ->
-                    if (path.isNotEmpty() && File(path).exists()) {
-                        imagePaths.add(path)
+        // 从 Intent 获取编辑模式的物品ID
+        editItemId = intent.getStringExtra("itemId")
+        if (!editItemId.isNullOrEmpty()) {
+            FirebaseHelper.getItemById(editItemId!!) { item ->
+                item?.let {
+                    etName.setText(it.name)
+                    actvCategory.setText(it.category, false)
+                    etLocation.setText(it.location)
+                    etTime.setText(it.time)
+                    etContact.setText(it.phone)
+                    etDescription.setText(it.description)
+                    currentItemType = it.type ?: Constants.ITEM_TYPE_LOST
+                    updateTypeButtonStyles()
+                    selectedLatitude = it.latitude ?: 0.0
+                    selectedLongitude = it.longitude ?: 0.0
+                    selectedAddressText = it.addressText ?: ""
+                    if (selectedAddressText.isNotEmpty()) {
+                        tvAddressInfo.text = "经度: $selectedLongitude, 纬度: $selectedLatitude"
+                        tvAddressInfo.visibility = View.VISIBLE
                     }
+                    // 加载图片（Firebase版本暂时不支持编辑图片）
+                    btnSubmit.text = "更新"
+                    title = "编辑信息"
                 }
-                refreshImagePreviews()
             }
-            btnSubmit.text = "更新"
-            title = "编辑信息"
         }
     }
 
@@ -315,7 +310,6 @@ class PublishActivity : BaseActivity() {
     }
 
     private fun refreshImagePreviews() {
-        // 隐藏单图预览
         ivPreview.visibility = View.GONE
         layoutImageList.removeAllViews()
 
@@ -329,7 +323,6 @@ class PublishActivity : BaseActivity() {
         val imgSize = (110 * displayMetrics.density).toInt()
 
         imagePaths.forEachIndexed { index, path ->
-            // 图片容器
             val container = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 setPadding(0, 0, 8.dp, 0)
@@ -345,7 +338,6 @@ class PublishActivity : BaseActivity() {
                     .into(this)
             }
 
-            // 删除按钮
             val tvDel = TextView(this).apply {
                 text = "✕"
                 textSize = 11f
@@ -389,31 +381,101 @@ class PublishActivity : BaseActivity() {
         if (name.isEmpty()) { Toast.makeText(this, "请输入物品名称", Toast.LENGTH_SHORT).show(); return }
         if (contact.isEmpty()) { Toast.makeText(this, "请输入联系方式", Toast.LENGTH_SHORT).show(); return }
 
-        val publisher = userManager.getCurrentUser()
-        if (publisher.isEmpty()) {
+        val publisherId = userManager.getUserId()
+        val publisherName = userManager.getUserName()
+        
+        Log.d(TAG, "发布信息 - 用户ID: $publisherId, 用户名: $publisherName")
+        
+        if (publisherId.isEmpty()) {
+            Log.e(TAG, "用户ID为空，无法发布")
             Toast.makeText(this, "用户信息异常，请重新登录", Toast.LENGTH_SHORT).show()
             return
         }
 
-        val joinedPath = imagePaths.joinToString(IMAGE_SEPARATOR)
+        // 获取当前校区（从 UserManager 获取或使用默认值）
+        val campus = userManager.getUserCampus() ?: "文昌校区"
+        Log.d(TAG, "校区: $campus")
 
+        // 创建 Firebase 物品对象
         val item = Item(
-            id = if (editItemId > 0) editItemId else 0,
-            type = type, name = name, category = category,
-            location = location, time = time, contact = contact,
-            description = description, imagePath = joinedPath,
-            publisher = publisher,
-            publishTime = TimeUtil.formatTimestamp(TimeUtil.currentTimestamp()),
-            latitude = selectedLatitude, longitude = selectedLongitude,
+            type = type,
+            name = name,
+            category = category,
+            location = location,
+            campus = campus,
+            time = time,
+            phone = contact,
+            description = description,
+            images = imagePaths,
+            publisherId = publisherId,
+            publisherName = publisherName,
+            latitude = selectedLatitude,
+            longitude = selectedLongitude,
             addressText = selectedAddressText
         )
 
-        val success = if (editItemId > 0) itemDao.update(item) > 0 else itemDao.insert(item) > 0
-        if (success) {
-            Toast.makeText(this, getString(R.string.publish_success), Toast.LENGTH_SHORT).show()
-            finish()
+        // 如果是编辑模式，设置 ID
+        if (!editItemId.isNullOrEmpty()) {
+            item.id = editItemId
+        }
+
+        // 显示加载对话框
+        val loadingDialog = android.app.AlertDialog.Builder(this)
+            .setMessage("正在发布中，请稍候...")
+            .setCancelable(false)
+            .create()
+        loadingDialog.show()
+
+        // 设置超时处理（30秒）
+        val timeoutHandler = android.os.Handler(android.os.Looper.getMainLooper())
+        val timeoutRunnable = Runnable {
+            if (loadingDialog.isShowing) {
+                loadingDialog.dismiss()
+                Log.e(TAG, "❌ 发布超时")
+                Toast.makeText(this, "网络超时，请检查网络后重试", Toast.LENGTH_LONG).show()
+            }
+        }
+        timeoutHandler.postDelayed(timeoutRunnable, 30000) // 30秒超时
+
+        // 使用 Firebase 保存
+        if (editItemId.isNullOrEmpty()) {
+            Log.d(TAG, "开始发布新物品到 Firebase")
+            FirebaseHelper.addItem(item) { itemId ->
+                timeoutHandler.removeCallbacks(timeoutRunnable) // 取消超时
+                loadingDialog.dismiss()
+                
+                if (itemId != null) {
+                    Log.d(TAG, "✅ 发布成功，物品ID: $itemId")
+                    Toast.makeText(this, getString(R.string.publish_success), Toast.LENGTH_SHORT).show()
+                    
+                    // 发送广播通知 MainActivity 刷新数据
+                    val intent = Intent("com.campus.lostfound.ACTION_ITEM_UPDATED")
+                    sendBroadcast(intent)
+                    
+                    // 延迟1秒后返回，给 Firebase 数据同步时间
+                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                        finish()
+                    }, 1000)
+                } else {
+                    Log.e(TAG, "❌ 发布失败，itemId 为 null")
+                    Toast.makeText(this, getString(R.string.publish_fail), Toast.LENGTH_SHORT).show()
+                }
+            }
         } else {
-            Toast.makeText(this, getString(R.string.publish_fail), Toast.LENGTH_SHORT).show()
+            Log.d(TAG, "开始更新物品: $editItemId")
+            FirebaseHelper.updateItem(item) { success ->
+                timeoutHandler.removeCallbacks(timeoutRunnable) // 取消超时
+                loadingDialog.dismiss()
+                
+                if (success) {
+                    Log.d(TAG, "✅ 更新成功")
+                    Toast.makeText(this, "更新成功", Toast.LENGTH_SHORT).show()
+                    finish()
+                } else {
+                    Log.e(TAG, "❌ 更新失败")
+                    Toast.makeText(this, "更新失败", Toast.LENGTH_SHORT).show()
+                }
+            }
         }
     }
 

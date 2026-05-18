@@ -1,5 +1,6 @@
 package com.campus.lostfound.firebase
 
+import android.util.Log
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
@@ -15,11 +16,18 @@ import kotlin.coroutines.resumeWithException
  */
 object FirebaseHelper {
 
+    private const val TAG = "FirebaseHelper"
+
     /**
      * Firebase数据库实例
      * 通过getInstance()获取数据库单例
      */
     private val database = FirebaseDatabase.getInstance()
+
+    init {
+        Log.d(TAG, "FirebaseHelper 初始化")
+        Log.d(TAG, "数据库URL: ${database.reference.toString()}")
+    }
 
     /**
      * 物品表引用
@@ -47,23 +55,29 @@ object FirebaseHelper {
      * @return 物品列表，按发布时间倒序排列
      */
     fun getAllItems(type: String? = null, callback: (List<Item>) -> Unit) {
+        Log.d(TAG, "开始获取所有物品, type: $type")
         itemsRef.addListenerForSingleValueEvent(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 val items = mutableListOf<Item>()
+                Log.d(TAG, "获取到物品数量: ${snapshot.childrenCount}")
+                
                 for (dataSnapshot in snapshot.children) {
                     val item = dataSnapshot.getValue(Item::class.java)
                     item?.id = dataSnapshot.key
                     // 根据类型筛选
                     if (type == null || item?.type == type) {
                         items.add(item!!)
+                        Log.d(TAG, "物品: ${item.id}, ${item.name}, ${item.type}")
                     }
                 }
                 // 按发布时间倒序排列
                 items.sortByDescending { it.publishTime }
+                Log.d(TAG, "筛选后物品数量: ${items.size}")
                 callback(items)
             }
 
             override fun onCancelled(error: DatabaseError) {
+                Log.e(TAG, "获取物品失败: ${error.message}")
                 callback(emptyList())
             }
         })
@@ -89,20 +103,38 @@ object FirebaseHelper {
     }
 
     /**
+     * 获取指定ID的物品详情（与getItem方法相同，提供不同的方法名）
+     * @param itemId 物品ID
+     * @param callback 回调，返回物品对象
+     */
+    fun getItemById(itemId: String, callback: (Item?) -> Unit) {
+        getItem(itemId, callback)
+    }
+
+    /**
      * 添加新物品
      * @param item 物品对象（不含ID）
      * @param callback 回调，返回生成的物品ID
      */
     fun addItem(item: Item, callback: (String?) -> Unit) {
+        Log.d(TAG, "开始添加物品: ${item.name}")
+        
         // 生成新的唯一ID
         val newRef = itemsRef.push()
         item.id = newRef.key
         item.publishTime = System.currentTimeMillis()
 
+        Log.d(TAG, "生成的物品ID: ${item.id}")
+        Log.d(TAG, "物品数据: type=${item.type}, name=${item.name}, publisherId=${item.publisherId}")
+
         newRef.setValue(item) { error, _ ->
             if (error == null) {
+                Log.d(TAG, "✅ 物品添加成功: ${item.id}")
                 callback(newRef.key)
             } else {
+                Log.e(TAG, "❌ 物品添加失败: ${error.message}")
+                Log.e(TAG, "错误代码: ${error.code}")
+                Log.e(TAG, "错误详情: ${error.details}")
                 callback(null)
             }
         }

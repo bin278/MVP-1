@@ -104,7 +104,7 @@ class FirebasePostAdapter(
             // 设置发布者信息
             val publisherName = item.publisherName ?: item.publisherId ?: "用户"
             tvNickname.text = publisherName
-            tvCampusTag.text = "校园"
+            tvCampusTag.text = item.campus ?: "校园"
 
             // 头像：显示首字
             showTextAvatar(publisherName)
@@ -127,22 +127,30 @@ class FirebasePostAdapter(
             val desc = buildDescription(item)
             tvDescription.text = desc
 
-            // 图片加载（从URL加载）
-            val imageUrl = item.imageUrl
-            if (imageUrl.isNullOrEmpty()) {
+            // 图片加载（从图片列表加载）
+            val images = item.images ?: emptyList()
+            if (images.isEmpty()) {
                 layoutImages.visibility = View.GONE
             } else {
                 layoutImages.visibility = View.VISIBLE
-                val requestOptions = RequestOptions()
-                    .transform(RoundedCorners(8))
-                    .centerCrop()
                 // 加载第一张图片
                 Glide.with(context)
-                    .load(imageUrl)
-                    .apply(requestOptions)
+                    .load(images[0])
+                    .apply(RequestOptions().transform(RoundedCorners(8)).centerCrop())
                     .placeholder(android.R.drawable.ic_menu_gallery)
                     .into(ivImage1)
-                ivImage2.visibility = View.GONE
+                
+                // 加载第二张图片（如果有）
+                if (images.size > 1) {
+                    ivImage2.visibility = View.VISIBLE
+                    Glide.with(context)
+                        .load(images[1])
+                        .apply(RequestOptions().transform(RoundedCorners(8)).centerCrop())
+                        .placeholder(android.R.drawable.ic_menu_gallery)
+                        .into(ivImage2)
+                } else {
+                    ivImage2.visibility = View.GONE
+                }
             }
 
             // 设置浏览量（模拟数据）
@@ -176,11 +184,15 @@ class FirebasePostAdapter(
          */
         private fun buildDescription(item: Item): CharSequence {
             val name = item.name ?: ""
+            val category = item.category ?: ""
             val location = item.location ?: ""
             val description = item.description ?: ""
             
             val fullText = buildString {
                 append(name)
+                if (category.isNotEmpty()) {
+                    append(" [$category]")
+                }
                 if (location.isNotEmpty()) {
                     append(" 📍").append(location)
                 }
